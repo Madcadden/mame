@@ -824,6 +824,10 @@ static INPUT_PORTS_START( harddriv )
 	PORT_DIPNAME( 0x80, 0x80, "SW1:1" )
 	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	// Virtual DIP switches for custom wheel selection	
+	PORT_DIPNAME( 0x700, 0x100, "Steering Wheel Selection" )
+	PORT_DIPSETTING(    0x100, "Steering Wheel" )
+	PORT_DIPSETTING(    0x300, "Custom Steering Wheel" )
 
 	PORT_START("mainpcb:a80000")
 	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_START2 ) PORT_NAME("Abort")    /* abort */
@@ -856,7 +860,10 @@ static INPUT_PORTS_START( harddriv )
 	PORT_BIT( 0xff, 0x80, IPT_CUSTOM )
 
 	PORT_START("mainpcb:12BADC.0")       /* b80000 - 12 bit ADC 0 - steering wheel */
-	PORT_BIT( 0xfff, 0x800, IPT_PADDLE ) PORT_MINMAX(0x010,0xff0) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Steering Wheel")
+	PORT_BIT( 0xfff, 0x800, IPT_PADDLE ) PORT_CONDITION("mainpcb:SW1", 0x700, EQUALS, 0x100) PORT_MINMAX(0x010,0xff0) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Steering Wheel")
+
+										 /* b80000 - 12 bit ADC 0 - custom steering wheel */
+	PORT_BIT(0xfff, 0x800, IPT_PADDLE) PORT_CONDITION("mainpcb:SW1", 0x700, EQUALS, 0x300) PORT_MINMAX(0x3eb,0xc14) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Custom Steering Wheel")
 
 	PORT_START("mainpcb:12BADC.1")       /* b80000 - 12 bit ADC 1 - force brake */
 	PORT_BIT( 0xfff, 0x000, IPT_PEDAL2 ) PORT_SENSITIVITY(400) PORT_KEYDELTA(100) PORT_REVERSE PORT_NAME("Brake Pedal")
@@ -907,6 +914,10 @@ static INPUT_PORTS_START( racedriv )
 	PORT_DIPNAME( 0x80, 0x80, "SW1:1" )
 	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	// Virtual DIP switches for custom wheel selection	
+	PORT_DIPNAME( 0x700, 0x100, "Steering Wheel Selection" )
+	PORT_DIPSETTING(    0x100, "Steering Wheel" )
+	PORT_DIPSETTING(    0x300, "Custom Steering Wheel" )
 
 	PORT_START("mainpcb:a80000")
 	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_START2 ) PORT_NAME("Abort")    /* abort */
@@ -939,7 +950,10 @@ static INPUT_PORTS_START( racedriv )
 	PORT_BIT( 0xff, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("mainpcb:12BADC.0")       /* b80000 - 12 bit ADC 0 - steering wheel */
-	PORT_BIT( 0xfff, 0x800, IPT_PADDLE ) PORT_MINMAX(0x010,0xff0) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Steering Wheel")
+	PORT_BIT( 0xfff, 0x800, IPT_PADDLE ) PORT_CONDITION("mainpcb:SW1", 0x700, EQUALS, 0x100) PORT_MINMAX(0x010,0xff0) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Steering Wheel")
+
+										 /* b80000 - 12 bit ADC 0 - custom steering wheel */
+	PORT_BIT(0xfff, 0x800, IPT_PADDLE) PORT_CONDITION("mainpcb:SW1", 0x700, EQUALS, 0x300) PORT_MINMAX(0x3eb,0xc14) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Custom Steering Wheel")
 
 	PORT_START("mainpcb:12BADC.1")       /* b80000 - 12 bit ADC 1 - force brake */
 	PORT_BIT( 0xfff, 0x000, IPT_PEDAL2 ) PORT_SENSITIVITY(400) PORT_KEYDELTA(100) PORT_REVERSE PORT_NAME("Brake Pedal")
@@ -1030,6 +1044,11 @@ static INPUT_PORTS_START( racedrivc )
 	PORT_DIPNAME( 0x80, 0x80, "SW1:1" )
 	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
+	// Virtual DIP switches for custom wheel selection
+	PORT_DIPNAME( 0x700, 0x100, "Steering Wheel Selection" )
+	PORT_DIPSETTING(    0x100, "Steering Wheel" )
+	PORT_DIPSETTING(    0x300, "Custom Steering Wheel" )
+	PORT_DIPSETTING(    0x400, "Calibration Wheel" )
 
 	PORT_START("mainpcb:a80000")
 	PORT_BIT( 0x0001, IP_ACTIVE_LOW, IPT_START2 ) PORT_NAME("Abort")
@@ -1069,7 +1088,13 @@ static INPUT_PORTS_START( racedrivc )
 	PORT_BIT( 0xff, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("mainpcb:12BADC.0")       /* 400000 - steering wheel */
-	PORT_BIT( 0xfff, 0x800, IPT_PADDLE ) PORT_MINMAX(0x010, 0xff0) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Steering Wheel")
+	PORT_BIT(0xfff, 0x800, IPT_PADDLE) PORT_CONDITION("mainpcb:SW1", 0x700, EQUALS, 0x100) PORT_MINMAX(0x010, 0xff0) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Steering Wheel")
+	
+										 /* 400000 - custom steering wheel */
+	PORT_BIT(0xfff, 0x800, IPT_PADDLE) PORT_CONDITION("mainpcb:SW1", 0x700, EQUALS, 0x300) PORT_MINMAX(0x333, 0xccc) PORT_SENSITIVITY(400) PORT_KEYDELTA(5) PORT_NAME("Custom Steering Wheel")	
+	
+										 /* 400000 - calibration wheel */
+	PORT_BIT(0xffff, 0x0000, IPT_PADDLE) PORT_CONDITION("mainpcb:SW1", 0x700, EQUALS, 0x400) PORT_MINMAX(0x0000, 0x2800) PORT_SENSITIVITY(15) PORT_KEYDELTA(15) PORT_NAME("Calibration Wheel")		
 
 	/* dummy ADC ports to end up with the same number as the full version */
 	PORT_START("mainpcb:12BADC.1")
@@ -1338,7 +1363,7 @@ static INPUT_PORTS_START( strtdriv )
 	PORT_BIT( 0xff, 0x80, IPT_UNUSED )
 
 	PORT_START("mainpcb:12BADC.0")       /* 400000 - steering wheel */
-	PORT_BIT( 0xfff, 0x200, IPT_PADDLE ) PORT_MINMAX(0x000, 0x3ff) PORT_SENSITIVITY(100) PORT_KEYDELTA(5) PORT_NAME("Steering Wheel")
+	PORT_BIT(0xfff, 0x800, IPT_PADDLE) PORT_MINMAX(0x600, 0x9ff) PORT_SENSITIVITY(100) PORT_KEYDELTA(5) PORT_NAME("Steering Wheel")
 
 	/* dummy ADC ports to end up with the same number as the full version */
 	PORT_START("mainpcb:12BADC.1")       /* FAKE */
@@ -1428,7 +1453,7 @@ static INPUT_PORTS_START( hdrivair )
 	PORT_BIT( 0xff, 0x80, IPT_UNUSED )
 
 	PORT_START("mainpcb:12BADC.0")       /* 400000 - steering wheel */
-	PORT_BIT( 0xfff, 0x200, IPT_PADDLE ) PORT_MINMAX(0x000, 0x3ff) PORT_SENSITIVITY(100) PORT_KEYDELTA(5) PORT_REVERSE PORT_NAME("Steering Wheel")
+	PORT_BIT(0xfff, 0x800, IPT_PADDLE) PORT_MINMAX(0x600, 0x9ff) PORT_SENSITIVITY(100) PORT_KEYDELTA(5) PORT_REVERSE PORT_NAME("Steering Wheel")
 
 	/* dummy ADC ports to end up with the same number as the full version */
 	PORT_START("mainpcb:12BADC.1")
@@ -1460,7 +1485,7 @@ void harddriv_state::video_int_write_line(int state)
 void harddriv_state::driver_nomsp(machine_config &config)
 {
 	/* basic machine hardware */
-	M68010(config, m_maincpu, HARDDRIV_MASTER_CLOCK/4);
+	M68010(config, m_maincpu, HARDDRIV_MASTER_CLOCK/32*20);
 	m_maincpu->set_addrmap(AS_PROGRAM, &harddriv_state::driver_68k_map);
 	m_maincpu->set_periodic_int(FUNC(harddriv_state::hd68k_irq_gen), attotime::from_hz(HARDDRIV_MASTER_CLOCK/16/16/16/16/2));
 
@@ -1480,10 +1505,10 @@ void harddriv_state::driver_nomsp(machine_config &config)
 	m_adc8->in_callback<6>().set_ioport("8BADC.6");
 	m_adc8->in_callback<7>().set_ioport("8BADC.7");
 
-	TMS34010(config, m_gsp, HARDDRIV_GSP_CLOCK);
+	TMS34010(config, m_gsp, HARDDRIV_GSP_CLOCK*4);
 	m_gsp->set_addrmap(AS_PROGRAM, &harddriv_state::driver_gsp_map);
 	m_gsp->set_halt_on_reset(true);
-	m_gsp->set_pixel_clock(4000000);
+	m_gsp->set_pixel_clock(8044693);
 	m_gsp->set_pixels_per_clock(4);
 	m_gsp->set_scanline_ind16_callback(FUNC(harddriv_state::scanline_driver));
 	m_gsp->output_int().set(FUNC(harddriv_state::hdgsp_irq_gen));
@@ -1508,7 +1533,7 @@ void harddriv_state::driver_nomsp(machine_config &config)
 	PALETTE(config, m_palette).set_entries(1024);
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
-	m_screen->set_raw(HARDDRIV_GSP_CLOCK/12*4, 160*4, 0, 127*4, 417, 0, 384);
+	m_screen->set_raw(HARDDRIV_GSP_CLOCK/179*120, 160*4, 0, 127*4, 417, 0, 384);
 	m_screen->set_screen_update("gsp", FUNC(tms34010_device::tms340x0_ind16));
 	m_screen->set_video_attributes(VIDEO_UPDATE_BEFORE_VBLANK);
 	m_screen->set_palette(m_palette);
@@ -1525,7 +1550,7 @@ void harddriv_state::driver_msp(machine_config &config)
 	TMS34010(config, m_msp, XTAL(50'000'000));
 	m_msp->set_addrmap(AS_PROGRAM, &harddriv_state::driver_msp_map);
 	m_msp->set_halt_on_reset(true);
-	m_msp->set_pixel_clock(5000000);
+	m_msp->set_pixel_clock(12000000);
 	m_msp->set_pixels_per_clock(2);
 	m_msp->output_int().set(FUNC(harddriv_state::hdmsp_irq_gen));
 	m_msp->set_screen("screen");
@@ -1543,13 +1568,13 @@ void harddriv_state::multisync_nomsp(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &harddriv_state::multisync_68k_map);
 
 	m_gsp->set_addrmap(AS_PROGRAM, &harddriv_state::multisync_gsp_map);
-	m_gsp->set_pixel_clock(6000000);
+	m_gsp->set_pixel_clock(12000000);
 	m_gsp->set_pixels_per_clock(2);
 	m_gsp->ioreg_pre_write().set(FUNC(harddriv_state::hdgsp_io_w));
 	m_gsp->set_scanline_ind16_callback(FUNC(harddriv_state::scanline_multisync));
 
 	/* video hardware */
-	m_screen->set_raw(HARDDRIV_GSP_CLOCK/8*2, 323*2, 0, 256*2, 308, 0, 288);
+	m_screen->set_raw(HARDDRIV_GSP_CLOCK/240*120, 323*2, 0, 256*2, 308, 0, 288);
 }
 
 
@@ -1562,7 +1587,7 @@ void harddriv_state::multisync_msp(machine_config &config)
 	TMS34010(config, m_msp, XTAL(50'000'000));
 	m_msp->set_addrmap(AS_PROGRAM, &harddriv_state::driver_msp_map);
 	m_msp->set_halt_on_reset(true);
-	m_msp->set_pixel_clock(5000000);
+	m_msp->set_pixel_clock(12000000);
 	m_msp->set_pixels_per_clock(2);
 	m_msp->output_int().set(FUNC(harddriv_state::hdmsp_irq_gen));
 	m_msp->set_screen("screen");
@@ -1595,7 +1620,7 @@ void harddriv_state::multisync2(machine_config &config)
 void harddriv_state::adsp(machine_config &config)
 {
 	/* basic machine hardware */
-	ADSP2100(config, m_adsp, XTAL(32'000'000)/4);
+	ADSP2100(config, m_adsp, XTAL(32'000'000));
 	m_adsp->set_addrmap(AS_PROGRAM, &harddriv_state::adsp_program_map);
 	m_adsp->set_addrmap(AS_DATA, &harddriv_state::adsp_data_map);
 }
@@ -1605,7 +1630,7 @@ void harddriv_state::adsp(machine_config &config)
 void harddriv_state::ds3(machine_config &config)
 {
 	/* basic machine hardware */
-	ADSP2101(config, m_adsp, XTAL(12'000'000));
+	ADSP2101(config, m_adsp, XTAL(12'000'000)*4);
 	m_adsp->set_addrmap(AS_PROGRAM, &harddriv_state::ds3_program_map);
 	m_adsp->set_addrmap(AS_DATA, &harddriv_state::ds3_data_map);
 
@@ -1716,6 +1741,8 @@ harddrivc_board_device_state::harddrivc_board_device_state(const machine_config 
 void harddrivc_board_device_state::device_add_mconfig(machine_config &config)
 {
 	multisync_msp(config);
+
+    m_gsp->set_clock(m_gsp->clock() / 2);   // << 50% GSP just for Compact
 
 	/* basic machine hardware */        /* multisync board with MSP */
 	adsp(config);                       /* ADSP board */
@@ -4269,7 +4296,7 @@ ROM_START( racedrivpan )
 	ROM_LOAD( "rdps1124.bin", 0x010000, 0x010000, CRC(071a4309) SHA1(c623bd51d6a4a56503fbf138138854d6a30b11d6) )
 	ROM_LOAD( "rdps3125.bin", 0x020000, 0x010000, CRC(856548ff) SHA1(e8a17b274185c5e4ecf5f9f1c211e18b3ef2456d) )
 	ROM_LOAD( "rdps1126.bin", 0x030000, 0x010000, CRC(f46ef09c) SHA1(ba62f73ee3b33d8f26b430ffa468f8792dca23de) )
-	ROM_LOAD( "rdps1017.bin", 0x040000, 0x010000, CRC(f46ef09c) SHA1(ba62f73ee3b33d8f26b430ffa468f8792dca23de) )
+	ROM_LOAD( "rdps1017.bin", 0x040000, 0x010000, CRC(e93129a3) SHA1(1221b08c8efbfd8cf6bfbfd956545f10bef48663) )
 
 	ROM_REGION( 0x800, "mainpcb:200e", 0 )
 	ROM_LOAD( "racedriv.200e",   0x000000, 0x000800, CRC(bfdf633c) SHA1(b930f90c388e6773e6ba4254214a3a6076e610b0) )
@@ -4340,6 +4367,62 @@ ROM_START( racedrivpan )
 	ROM_LOAD( "rightpcb_200e",   0x000000, 0x000800, CRC(6f1b7094) SHA1(6194a5b99aebe43f02c8d267290207b32c5bdbbd) )
 	ROM_REGION( 0x800, "rightpcb:210e", 0 )
 	ROM_LOAD( "rightpcb_210e",   0x000000, 0x000800, CRC(108ea834) SHA1(d7aec78287647dc52f92143cdb6d7765de0b4e39) )
+ROM_END
+
+ROM_START( racedrivpab )
+	ROM_REGION( 0x200000, "mainpcb:maincpu", 0 )        /* 2MB for 68000 code */
+	// Multisync PBB A045988 - Central Monitor
+	ROM_LOAD16_BYTE( "088-1002.bin", 0x000000, 0x010000, CRC(49a97391) SHA1(dbe4086cd87669a02d2a2133d0d9e2895946b383) )
+	ROM_LOAD16_BYTE( "088-1001.bin", 0x000001, 0x010000, CRC(4473accc) SHA1(099bda6cfe31d4e53cbe74046679ddf8b874982d) )
+	ROM_LOAD16_BYTE( "088-1004.bin", 0x020000, 0x010000, CRC(33b84ca6) SHA1(9e3cafadfb23bfc4a44e503043cc05db27d939a9) )
+	ROM_LOAD16_BYTE( "088-1003.bin", 0x020001, 0x010000, CRC(e617e6e2) SHA1(1bd308eff51588edfde21f3df1e84d3223d5d57a) )
+	ROM_LOAD16_BYTE( "088-1006.bin", 0x040000, 0x010000, CRC(1caeb314) SHA1(ebcf3e4cc13155206102bfada9422d4e318697e0) )
+	ROM_LOAD16_BYTE( "088-1005.bin", 0x040001, 0x010000, CRC(f23a73b8) SHA1(8e060077c971309dcc620402ee456ee66e59bfae) )
+	ROM_LOAD16_BYTE( "088-1008.bin", 0x060000, 0x010000, CRC(b0d60278) SHA1(d35ed22d3cbc725bbe023ae415a417f1c6532d30) )
+	ROM_LOAD16_BYTE( "088-1007.bin", 0x060001, 0x010000, CRC(c4fc82dc) SHA1(67575f533a658dd06fa6a143a654e9777f2e19ab) )
+	ROM_LOAD16_BYTE( "088-1010.bin", 0x080000, 0x010000, CRC(1b64bce1) SHA1(80edf1a77aee32f675c2a99769b1a390214ec075) )
+	ROM_LOAD16_BYTE( "088-1009.bin", 0x080001, 0x010000, CRC(413f4110) SHA1(6f71a5e46c29b4c51f3624484cdaed16babe3cd5) )
+	ROM_LOAD16_BYTE( "136077-1112.200w", 0x0a0000, 0x010000, CRC(5b5a2527) SHA1(a5762b4f9d0abbc9a54b1ac3014ae69394c7e03e) ) // Right Hand Drive (racedrivcb)
+	ROM_LOAD16_BYTE( "136077-1111.210w", 0x0a0001, 0x010000, CRC(1f6224ec) SHA1(54d91406629dc64c9458d73e73e7c9fff6dbd915) ) // Right Hand Drive (racedrivcb)
+	ROM_LOAD16_BYTE( "088-1014.bin", 0x0c0000, 0x010000, CRC(5b721420) SHA1(cba03943d56eb1d747e48fbe2856c64d2129be3b) ) // == 136091-0014.200x (strtdriv)
+	ROM_LOAD16_BYTE( "088-1013.bin", 0x0c0001, 0x010000, CRC(c503b019) SHA1(e35779c0792bb2258dd0830c00a7d2722a0b115e) ) // == 136091-0013.210x (strtdriv)
+	ROM_LOAD16_BYTE( "088-1016.bin", 0x0e0000, 0x010000, CRC(e83a9c99) SHA1(1d4093902133bb6da981f294e6947544c3564393) ) // == 136077-1016.200y
+	ROM_LOAD16_BYTE( "088-1015.bin", 0x0e0001, 0x010000, CRC(725806f3) SHA1(0fa4601465dc94f27c71db789ad625bbcd254169) ) // == 136077-4015.210y
+
+	ROM_REGION16_BE( 0x60000, "mainpcb:user1", 0 )       /* 384k for object ROM */
+	ROM_LOAD16_BYTE( "136091-0018.2t",  0x00000, 0x10000, CRC(ef432aa8) SHA1(56bce13c111db7874c9b669d479f6ef47976ee14) ) // (strtdriv)
+	ROM_LOAD16_BYTE( "136091-0017.2lm", 0x00001, 0x10000, CRC(b0454074) SHA1(9530ea1ef215116da1f0843776fa7a6b4637049d) ) // (strtdriv)
+	ROM_LOAD16_BYTE( "136091-0020.2r",  0x20000, 0x10000, CRC(311cef99) SHA1(9c466aabad7e80581e477253ec6f2fd245f9b9fd) ) // (strtdriv)
+	ROM_LOAD16_BYTE( "136091-0019.2k",  0x20001, 0x10000, CRC(5bb00676) SHA1(cad1cea8e43f9590fc71c00fab4eff0d447f9296) ) // (strtdriv)
+	ROM_LOAD16_BYTE( "136091-0022.2p",  0x40000, 0x10000, CRC(bc4dd071) SHA1(ca182451a0a18d343dce1be56090d51950d43906) ) // (strtdriv)
+	ROM_LOAD16_BYTE( "136091-0021.2j",  0x40001, 0x10000, CRC(14f2caae) SHA1(ff40dbced58dc910a2b5825b846a5e52933cb8fc) ) // (strtdriv)
+	
+	ROM_REGION( 0x2000, "mainpcb:asic65:asic65cpu", 0 )   /* ASIC65 TMS32015 code */
+	ROM_LOAD( "136077-1027.30j", 0x00000, 0x02000, NO_DUMP )
+
+	/* ADSP board */
+	ROM_REGION( 0x20000, "mainpcb:harddriv_sound:soundcpu", 0 )        /* 2*64k for audio 68000 code */
+	ROM_LOAD16_BYTE( "rdps1032.bin", 0x000000, 0x010000, CRC(33005f2a) SHA1(e4037a76f122b271a9675d9187ab847a11738640) )
+	ROM_LOAD16_BYTE( "rdps1033.bin", 0x000001, 0x010000, CRC(4fc800ac) SHA1(dd8cfdb727d6a65274f4f871a589a36796ae1e57) )
+
+	/* DSK board */
+	ROM_REGION16_BE( 0x50000, "mainpcb:user3", 0 )  /* 256k for DSK ROMs + 64k for RAM */
+	ROM_LOAD16_BYTE( "rdpd1026.bin", 0x000000, 0x020000, CRC(16572618) SHA1(08d9f7f76e6e75d5233240d4deab96808825994b) )
+	ROM_LOAD16_BYTE( "rdpd1025.bin", 0x000001, 0x020000, CRC(57b8a266) SHA1(257246d42841aa30220caeb91945e29978ee8fc0) )
+
+	/* Audio ROMs - show up as bad in self-test but so do racedriv's */
+	ROM_REGION( 0x50000, "mainpcb:harddriv_sound:serialroms", 0 )      /* 5*64k for audio serial ROMs */
+	ROM_LOAD( "rdps1123.bin", 0x000000, 0x010000, CRC(a88411dc) SHA1(1fd53c7eadffa163d5423df2f8338757e58d5f2e) )
+	ROM_LOAD( "rdps1124.bin", 0x010000, 0x010000, CRC(071a4309) SHA1(c623bd51d6a4a56503fbf138138854d6a30b11d6) )
+	ROM_LOAD( "rdps3125.bin", 0x020000, 0x010000, CRC(856548ff) SHA1(e8a17b274185c5e4ecf5f9f1c211e18b3ef2456d) )
+	ROM_LOAD( "rdps1126.bin", 0x030000, 0x010000, CRC(f46ef09c) SHA1(ba62f73ee3b33d8f26b430ffa468f8792dca23de) )
+	ROM_LOAD( "rdps1017.bin", 0x040000, 0x010000, CRC(e93129a3) SHA1(1221b08c8efbfd8cf6bfbfd956545f10bef48663) )
+
+	ROM_REGION( 0x800, "mainpcb:200e", 0 )
+	ROM_LOAD( "racedriv.200e",   0x000000, 0x000800, CRC(bfdf633c) SHA1(b930f90c388e6773e6ba4254214a3a6076e610b0) )
+
+	ROM_REGION( 0x800, "mainpcb:210e", 0 )
+	ROM_LOAD( "racedriv.210e",   0x000000, 0x000800, CRC(3d7c732e) SHA1(e7de81d4a54327514fdd339e93c888c63a344d2c) )
 ROM_END
 
 
@@ -5402,6 +5485,7 @@ GAME(  1990, racedrivc4,  racedriv, racedrivc_machine,  racedrivc, harddriv_new_
 GAME(  1990, racedrivcb4, racedriv, racedrivc_machine,  racedrivc, harddriv_new_state, empty_init, ROT0, "Atari Games", "Race Drivin' (compact, British, rev 4)", 0 )
 GAME(  1990, racedrivcg4, racedriv, racedrivc_machine,  racedrivc, harddriv_new_state, empty_init, ROT0, "Atari Games", "Race Drivin' (compact, German, rev 4)", 0 )
 GAME(  1990, racedrivc2,  racedriv, racedrivc1_machine, racedrivc, harddriv_new_state, empty_init, ROT0, "Atari Games", "Race Drivin' (compact, rev 2)", 0 ) // Hard Drivin' / Race Drivin' self test version 1.7 in test mode
+GAME(  1990, racedrivpab, racedriv, racedriv_machine,   racedriv,  harddriv_new_state, empty_init, ROT0, "Atari Games", "Race Drivin' Panorama (prototype, British, single cabinet, rev 2.1)", 0 )
 GAME(  1990, racedrivc1,  racedriv, racedrivc1_machine, racedrivc, harddriv_new_state, empty_init, ROT0, "Atari Games", "Race Drivin' (compact, rev 1)", 0 ) // Hard Drivin' / Race Drivin' self test version 1.6 in test mode
 GAME(  1990, racedrivcp,  racedriv, racedrivc1_machine, racedrivc, harddriv_new_state, empty_init, ROT0, "Atari Games", "Race Drivin' (compact, prototype)", 0 ) // Race Drivin' version 1.5 in test mode
 
