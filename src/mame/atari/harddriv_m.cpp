@@ -246,43 +246,69 @@ uint16_t harddriv_state::hdc68k_port1_r()
 	result = (result | 0x0f00) ^ (m_hdc68k_shifter_state << 8);
 
 	/* merge in the wheel edge latch bit */
-	if (m_hdc68k_wheel_edge)
-		result ^= 0x4000;
+    if (m_hdc68k_wheel_edge)
+    {
+        result ^= 0x4000;
+        printf("hdc68k_port1_r: merge latch result=%04X m_hdc68k_last_wheel=%04X\n", result, m_hdc68k_last_wheel);
+        m_hdc68k_wheel_edge = 0;
+    }
 
-	m_hdc68k_last_port1 = result;
-	return result;
-}
+    m_hdc68k_last_port1 = result;
+    return result;
+ }
+ 
+ 
+ uint16_t harddriv_state::hda68k_port1_r()
+ {
+    uint16_t result = m_a80000->read();
+ 
+    /* merge in the wheel edge latch bit */
+    if (m_hdc68k_wheel_edge)
+    {
+        result ^= 0x4000;
+        printf("hda68k_port1_r: merge latch result=%04X m_hdc68k_last_wheel=%04X\n", result, m_hdc68k_last_wheel);
+        m_hdc68k_wheel_edge = 0;
+    }
+ 
+    return result;
+ }
+ 
+ 
+ uint16_t harddriv_state::hdc68k_wheel_r()
+ {
+    // grab the new wheel value
+    uint16_t new_wheel = m_12badc[0].read_safe(0xffff);
 
+    // hack to display the wheel position
+    if (machine().input().code_pressed(KEYCODE_LSHIFT))
+    {
+        popmessage("wheel new=%04X", new_wheel);
+    }
 
-uint16_t harddriv_state::hda68k_port1_r()
-{
-	uint16_t result = m_a80000->read();
+    if ((m_hdc68k_last_wheel & 0x0C00) != (new_wheel & 0x0C00))
+    {
+        /*
+        Why the 0x0C00 mask? It checks if the new wheel position has moved into a new range.
+        NNNN 00NN NNNN NNNN     Thus range 0x0000 to 0x03FF
+        NNNN 01NN NNNN NNNN     Thus range 0x0400 to 0x07FF
+        NNNN 10NN NNNN NNNN     Thus range 0x0800 to 0x0BFF
+        NNNN 11NN NNNN NNNN     Thus range 0x0C00 to 0x0FFF
+        */
+        if(m_hdc68k_wheel_edge == 1)
+        {
+            //Already pending a latch. There is no point in doing 2 really quick latches,
+            //do nothing for the same effect.
+            m_hdc68k_wheel_edge = 0;
+        }
+        else
+        {
+            m_hdc68k_wheel_edge = 1;
+        }
+    }
 
-	/* merge in the wheel edge latch bit */
-	if (m_hdc68k_wheel_edge)
-		result ^= 0x4000;
-
-	return result;
-}
-
-
-uint16_t harddriv_state::hdc68k_wheel_r()
-{
-	/* grab the new wheel value */
-	uint16_t new_wheel = m_12badc[0].read_safe(0xffff);
-
-	/* hack to display the wheel position */
-	if (machine().input().code_pressed(KEYCODE_LSHIFT))
-		popmessage("%04X", new_wheel);
-
-	/* if we crossed the center line, latch the edge bit */
-	if ((m_hdc68k_last_wheel / 0xf00) != (new_wheel / 0xf00))
-		m_hdc68k_wheel_edge = 1;
-
-	/* remember the last value and return the low 8 bits */
-	m_hdc68k_last_wheel = new_wheel;
-	return (new_wheel << 8) | 0xff;
-}
+    m_hdc68k_last_wheel = new_wheel;
+    return (new_wheel << 8) | 0xff;
+ }
 
 
 uint16_t harddriv_state::hd68k_adc12_r()
