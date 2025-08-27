@@ -1485,7 +1485,7 @@ void harddriv_state::video_int_write_line(int state)
 void harddriv_state::driver_nomsp(machine_config &config)
 {
 	/* basic machine hardware */
-	M68010(config, m_maincpu, HARDDRIV_MASTER_CLOCK/32*20);
+	M68010(config, m_maincpu, HARDDRIV_MASTER_CLOCK);
 	m_maincpu->set_addrmap(AS_PROGRAM, &harddriv_state::driver_68k_map);
 	m_maincpu->set_periodic_int(FUNC(harddriv_state::hd68k_irq_gen), attotime::from_hz(HARDDRIV_MASTER_CLOCK/16/16/16/16/2));
 
@@ -1505,10 +1505,10 @@ void harddriv_state::driver_nomsp(machine_config &config)
 	m_adc8->in_callback<6>().set_ioport("8BADC.6");
 	m_adc8->in_callback<7>().set_ioport("8BADC.7");
 
-	TMS34010(config, m_gsp, HARDDRIV_GSP_CLOCK*4);
+	TMS34010(config, m_gsp, HARDDRIV_GSP_CLOCK);
 	m_gsp->set_addrmap(AS_PROGRAM, &harddriv_state::driver_gsp_map);
 	m_gsp->set_halt_on_reset(true);
-	m_gsp->set_pixel_clock(8044693);
+	m_gsp->set_pixel_clock(8012900);
 	m_gsp->set_pixels_per_clock(4);
 	m_gsp->set_scanline_ind16_callback(FUNC(harddriv_state::scanline_driver));
 	m_gsp->output_int().set(FUNC(harddriv_state::hdgsp_irq_gen));
@@ -1533,7 +1533,7 @@ void harddriv_state::driver_nomsp(machine_config &config)
 	PALETTE(config, m_palette).set_entries(1024);
 
 	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
-	m_screen->set_raw(HARDDRIV_GSP_CLOCK/179*120, 160*4, 0, 127*4, 417, 0, 384);
+	m_screen->set_raw(HARDDRIV_GSP_CLOCK*620*138, 160*4, 0, 127*4, 417, 0, 384);
 	m_screen->set_screen_update("gsp", FUNC(tms34010_device::tms340x0_ind16));
 	m_screen->set_video_attributes(VIDEO_UPDATE_BEFORE_VBLANK);
 	m_screen->set_palette(m_palette);
@@ -1574,7 +1574,7 @@ void harddriv_state::multisync_nomsp(machine_config &config)
 	m_gsp->set_scanline_ind16_callback(FUNC(harddriv_state::scanline_multisync));
 
 	/* video hardware */
-	m_screen->set_raw(HARDDRIV_GSP_CLOCK/240*120, 323*2, 0, 256*2, 308, 0, 288);
+	m_screen->set_raw(HARDDRIV_GSP_CLOCK/216*36, 323*2, 0, 256*2, 308, 0, 288);
 }
 
 
@@ -1620,7 +1620,7 @@ void harddriv_state::multisync2(machine_config &config)
 void harddriv_state::adsp(machine_config &config)
 {
 	/* basic machine hardware */
-	ADSP2100(config, m_adsp, XTAL(32'000'000));
+	ADSP2100(config, m_adsp, XTAL(32'000'000)/32*24);
 	m_adsp->set_addrmap(AS_PROGRAM, &harddriv_state::adsp_program_map);
 	m_adsp->set_addrmap(AS_DATA, &harddriv_state::adsp_data_map);
 }
@@ -1630,7 +1630,7 @@ void harddriv_state::adsp(machine_config &config)
 void harddriv_state::ds3(machine_config &config)
 {
 	/* basic machine hardware */
-	ADSP2101(config, m_adsp, XTAL(12'000'000)*4);
+	ADSP2101(config, m_adsp, XTAL(12'000'000)*3);
 	m_adsp->set_addrmap(AS_PROGRAM, &harddriv_state::ds3_program_map);
 	m_adsp->set_addrmap(AS_DATA, &harddriv_state::ds3_data_map);
 
