@@ -1,6 +1,6 @@
 # MADCADDEN CUSTOM HARDDRV MAME
 
-## MADCADDEN CUSTOM HARDDRV MAME?
+## WHAT IS MADCADDEN CUSTOM HARDDRV MAME?
 
 This version of MAME is modified to play the Hard Drivin', Race Drivin', Race Drivin' Panorama, Street Drivin' and Hard Drivin's Airborne ROM's at a higher frame rate than regular MAME or the original arcade machine hardware. It comes pre-overclocked and has some custom features like a custom Dip Switch that lets you select between the standard MAME "Steering Wheel" and a "Custom Steering Wheel" which is calibrated better for Logitech G923 Steering Wheels so the steering is less twitchy. 
 
