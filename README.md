@@ -1,29 +1,15 @@
-# MAME
+# MADCADEN CUSTOM HARDDRV MAME
 
-## What is MAME?
+## MADCADEN CUSTOM HARDDRV MAME?
 
-MAME is a multi-purpose emulation framework.
+This version of MAME is modified to play the Hard Drivin', Race Drivin', Race Drivin' Panorama, Street Drivin' and Hard Drivin's Airborne ROM's at a higher frame rate than regular MAME or the original arcade machine hardware. It comes pre-overclocked and has some custom features like a custom Dip Switch that lets you select between the standard MAME "Steering Wheel" and a "Custom Steering Wheel" which is calibrated better for Logitech G923 Steering Wheels so the steering is less twitchy. 
 
-MAME's purpose is to preserve decades of software history. As electronic technology continues to rush forward, MAME prevents this important "vintage" software from being lost and forgotten. This is achieved by documenting the hardware and how it functions. The source code to MAME serves as this documentation. The fact that the software is usable serves primarily to validate the accuracy of the documentation (how else can you prove that you have recreated the hardware faithfully?). Over time, MAME (originally stood for Multiple Arcade Machine Emulator) absorbed the sister-project MESS (Multi Emulator Super System), so MAME now documents a wide variety of (mostly vintage) computers, video game consoles and calculators, in addition to the arcade video games that were its initial focus.
+To calibrate the compact versions of Hard Drivin' and Race Drivin' you should select the "Calibration Wheel" and in the input settings you need to map "Calibration Wheel Analogue Inc" to the Kbd Right (right key on keyboard) and I recommend deleting the entry for "Calibration Wheel Analog". Once you do this you need to enter the test menu and start the steering calibration , it will tell you to turn the ignition key to start and once you do this hold down the left shift key on the keyboard and you will see a wheel value appear, it should say "1400". No whilst still holding the left shift key you need to hold down the right key you set earlier in the input menu to simulate the wheel turning 4 times. Now the following is important to get it set 100% accurately. As soon as you see the "wheel value" get to 2800 let go of the right key IMMEDIATLEY but keep the left shift button held down. You will see the wheel value slowly going back down to 1400 and as soon as it reaches 1400 press the ignition key! You should see a message saying "NEW CNTSPTRN 1024 PATCEN 0". If you see something like PATCEN -5 or something different it means you didn't let go of the right key quick enough when the wheel value reached 2800. Just do the calibration again and eventualy you should get it right. This is important to get the steering centered correctly on the compact versions of Hard Drivin' and Race Drivin'. After you have complete this you should enter the dip switch menu and switch the wheel back to "Steering Wheel" or "Custom Steering Wheel" if you are using a Logitech G923 wheel or similar. 
 
-## Where can I find out more?
+You DO NOT have to do this on the cockpit versions of the ROM's or the Race Drivin' Panorama / Hard Drvin's Airborne ROM's. To calibrate the steering in the cockpit versions and Race Drivin Panorama all you have to do is press the ignition key and dont touch the wheel and press it again to abort. This will automaticly calibrate the wheel to the correct values so all you have to do after that is calibrate the brake. You can skip the gear shifter calibration and the seat calibration as it's not needed for the game to work correctly.
 
-* [Official MAME Development Team Site](https://www.mamedev.org/) (includes binary downloads, wiki, forums, and more)
-* [MAME Testers](https://mametesters.org/) (official bug tracker for MAME)
+I recommend playing the British version of Race Drivin' Panorama instead of Street Drivin' because it has the extra Stock Car track that Street Drivin' has and it has manual transmision cars which Street Drivin' is lacking. Street Drivin's audio is messed up too compared to Race Drivin's Panorama. The British version of Race Drivin' Panorama runs at a much higher frame rate but it doesn't have the multi monitor capabilities. If you want to play with multiple monitors use the official version of MAME instead but be aware the frame rate will be very low.
 
-### Community
-
-* [MAME Forums on bannister.org](https://forums.bannister.org/ubbthreads.php?ubb=cfrm&c=5)
-* [r/MAME](https://www.reddit.com/r/MAME/) on Reddit
-* [MAMEWorld Forums](https://www.mameworld.info/ubbthreads/)
-
-## Development
-
-![Alt](https://repobeats.axiom.co/api/embed/8461d8ae4630322dafc736fc25782de214b49630.svg "Repobeats analytics image")
-
-### CI status and code scanning
-
-[![CI (Linux)](https://github.com/mamedev/mame/workflows/CI%20(Linux)/badge.svg)](https://github.com/mamedev/mame/actions/workflows/ci-linux.yml) [![CI (Windows](https://github.com/mamedev/mame/workflows/CI%20(Windows)/badge.svg)](https://github.com/mamedev/mame/actions/workflows/ci-windows.yml) [![CI (macOS)](https://github.com/mamedev/mame/workflows/CI%20(macOS)/badge.svg)](https://github.com/mamedev/mame/actions/workflows/ci-macos.yml) [![Compile UI translations](https://github.com/mamedev/mame/workflows/Compile%20UI%20translations/badge.svg)](https://github.com/mamedev/mame/actions/workflows/language.yml) [![Build documentation](https://github.com/mamedev/mame/workflows/Build%20documentation/badge.svg)](https://github.com/mamedev/mame/actions/workflows/docs.yml)  [![Coverity Scan Status](https://scan.coverity.com/projects/5727/badge.svg?flat=1)](https://scan.coverity.com/projects/mame-emulator)
 
 ### How to compile?
 
@@ -33,13 +19,17 @@ If you're on a UNIX-like system (including Linux and macOS), it could be as easy
 make
 ```
 
-for a full build,
+for a full build, (usefull if you want to play other ROM's for other systems).
+
+
+
+
+If you only want to play the Hard Drvin' / Race Drivin' series of Rom's then type this (it will compile much quicker).
 
 ```
-make SUBTARGET=tiny
+make SUBTARGET=harddrv   SOURCES=src/mame/atari/harddriv.cpp,src/mame/atari/harddriv_m.cpp,src/mame/atari/harddriv_a.cpp,src/mame/atari/harddriv_v.cpp
 ```
 
-for a build including a small subset of supported systems.
 
 See the [Compiling MAME](http://docs.mamedev.org/initialsetup/compilingmame.html) page on our documentation site for more information, including prerequisites for macOS and popular Linux distributions.
 
