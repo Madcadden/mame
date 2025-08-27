@@ -526,7 +526,8 @@ const double XTAL::known_xtals[] = {
 	105'561'000, // 105.561_MHz_XTAL       Sun cgsix
 	108'108'000, // 108.108_MHz_XTAL       HP 98550 high-res color card
 	120'000'000, // 120_MHz_XTAL           Astro Corp.'s Stone Age
-	200'000'000  // 200_MHz_XTAL           Base SH4 CPU (Naomi, Hikaru etc.)
+	144'000'000, // 144_MHz_XTAL           Custom harddriv XTAL
+	200'000'000, // 200_MHz_XTAL           Base SH4 CPU (Naomi, Hikaru etc.)
 };
 
 double XTAL::last_correct_value = -1;
