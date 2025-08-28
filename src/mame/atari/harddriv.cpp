@@ -1568,7 +1568,7 @@ void harddriv_state::multisync_nomsp(machine_config &config)
 	m_maincpu->set_addrmap(AS_PROGRAM, &harddriv_state::multisync_68k_map);
 
 	m_gsp->set_addrmap(AS_PROGRAM, &harddriv_state::multisync_gsp_map);
-	m_gsp->set_pixel_clock(12000000);
+	m_gsp->set_pixel_clock(14333280);
 	m_gsp->set_pixels_per_clock(2);
 	m_gsp->ioreg_pre_write().set(FUNC(harddriv_state::hdgsp_io_w));
 	m_gsp->set_scanline_ind16_callback(FUNC(harddriv_state::scanline_multisync));
