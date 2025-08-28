@@ -1574,7 +1574,7 @@ void harddriv_state::multisync_nomsp(machine_config &config)
 	m_gsp->set_scanline_ind16_callback(FUNC(harddriv_state::scanline_multisync));
 
 	/* video hardware */
-	m_screen->set_raw(HARDDRIV_GSP_CLOCK/216*36, 323*2, 0, 256*2, 308, 0, 288);
+	m_screen->set_raw(HARDDRIV_GSP_CLOCK/216*43, 323*2, 0, 256*2, 308, 0, 288);
 }
 
 
