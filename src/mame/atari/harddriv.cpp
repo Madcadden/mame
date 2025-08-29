@@ -1487,7 +1487,7 @@ void harddriv_state::driver_nomsp(machine_config &config)
 	/* basic machine hardware */
 	M68010(config, m_maincpu, HARDDRIV_MASTER_CLOCK);
 	m_maincpu->set_addrmap(AS_PROGRAM, &harddriv_state::driver_68k_map);
-	m_maincpu->set_periodic_int(FUNC(harddriv_state::hd68k_irq_gen), attotime::from_hz(HARDDRIV_MASTER_CLOCK/16/16/16/16/2));
+	m_maincpu->set_periodic_int(FUNC(harddriv_state::hd68k_irq_gen), attotime::from_hz(HARDDRIV_MASTER_CLOCK/16/16/16/24));
 
 	SLAPSTIC(config, m_slapstic, 117);
 	m_slapstic->set_range(m_maincpu, AS_PROGRAM, 0xe0000, 0xe7fff, 0x18000);
