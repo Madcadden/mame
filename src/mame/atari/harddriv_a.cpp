@@ -433,7 +433,7 @@ void harddriv_sound_board_device::driversnd_dsp_io_map(address_map &map)
 void harddriv_sound_board_device::device_add_mconfig(machine_config &config)
 {
 	/* basic machine hardware */
-	M68000(config, m_soundcpu, 16_MHz_XTAL/16*20);
+	M68000(config, m_soundcpu, 16_MHz_XTAL/16*24);
 	m_soundcpu->set_addrmap(AS_PROGRAM, &harddriv_sound_board_device::driversnd_68k_map);
 
 	LS259(config, m_latch, 0); // 80R
