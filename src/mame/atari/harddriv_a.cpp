@@ -465,8 +465,8 @@ TIMER_CALLBACK_MEMBER(harddriv_sound_board_device::am6012_stream_tick)
 
 	// 3-pole low-pass: two main poles + one gentle pole
 	// Defaults tuned for ~10–12 kHz band edge at 96 kHz mixer
-	const int K12 = 176; // ≈ 10.5 kHz per pole
-	const int K3  =  96; // gentle cleanup pole
+	const int K12 = 220; // ≈ 10.5 kHz per pole
+	const int K3  =  160; // gentle cleanup pole
 
 	int target = int(m_am6012_code) << 8; // 12-bit to 24.8 fixed-point
 
