@@ -83,6 +83,8 @@ private:
 
 	std::unique_ptr<u16[]> m_sprite_cache;
 	std::unique_ptr<u8[]> m_sprite_line;
+	std::unique_ptr<u8[]> m_tile_a_line;
+	std::unique_ptr<u8[]> m_tile_b_line;
 
 	TIMER_CALLBACK_MEMBER(scan_timer_callback);
 	TIMER_CALLBACK_MEMBER(vint_trigger_callback);
@@ -131,6 +133,9 @@ private:
 
 	u16 data_port_r(offs_t offset, u16 mem_mask);
 	void data_port_w(offs_t offset, u16 data, u16 mem_mask);
+	u16 control_port_r(offs_t offset, u16 mem_mask);
+	void control_port_w(offs_t offset, u16 data, u16 mem_mask);
+	u16 hv_counter_r(offs_t offset, u16 mem_mask);
 
 	void vram_w(offs_t offset, u16 data, u16 mem_mask);
 	void cram_w(offs_t offset, u16 data, u16 mem_mask);
@@ -149,6 +154,7 @@ private:
 	u32 m_sprite_attribute_table;
 	u8 m_background_color;
 	u16 m_hit; // HBlank interrupt rate
+	u8 m_vs, m_hs; // Vertical/Horizontal scroll modes
 	// window
 	bool m_rigt;
 	u8 m_whp;
@@ -156,11 +162,12 @@ private:
 	u8 m_wvp;
 
 	int m_vint_pending, m_hint_pending;
-	u16 m_vcounter; // irq4 counter
+	int m_vcounter; // irq4 counter
 
 	bitmap_rgb32 m_bitmap;
 	bool render_line(int scanline);
 	void prepare_sprite_line(int scanline);
+	void prepare_tile_line(int scanline);
 
 	DECLARE_GFXDECODE_MEMBER(gfxinfo);
 };
