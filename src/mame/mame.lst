@@ -17671,6 +17671,7 @@ zsbc3
 @source:dooyong/dooyong.cpp
 bluehawk
 bluehawkn
+bluehawkna
 ddaydoo
 flytiger
 flytigera
@@ -20434,6 +20435,9 @@ rtpca25
 @source:ibm/thinkpad600.cpp
 thinkpad600
 thinkpad600e
+thinkpad600x
+thinkpad760xd
+thinkpad770z
 
 @source:ibm/thinkpad8xx.cpp
 thinkpad850
@@ -20535,6 +20539,10 @@ chrygld
 chryglda
 chthree
 cll
+cm1codar
+cm1codara
+cm1codarb
+cm1spa
 cmast91
 cmast92
 cmast92a
@@ -20618,6 +20626,8 @@ ladylinrc
 ladylinrd
 ladylinre
 ll3
+lonestar
+lonestara
 lucky8
 lucky8a
 lucky8b
@@ -20704,9 +20714,12 @@ ns8linewa
 ns8linewb
 ns8linewc
 ns8linewd
+packsystem
 pkrmast
 pkrmasta
 pokonl97
+reelmagic
+rm_7bonus
 rolling
 roypok96
 roypok96a
@@ -20715,9 +20728,13 @@ roypok96c
 schery97
 schery97a
 scmaster
+skdelux2k
+skdelux99
 skill98
 skillch
 skillcha
+skillmst
+skillmsta
 srmagic
 star100
 super7
@@ -25218,6 +25235,7 @@ metamrphe
 metamrphj
 metamrphu
 mmaulers
+mmaulersu
 mtlchamp
 mtlchamp1
 mtlchampa
@@ -29926,6 +29944,7 @@ dynastye
 mystjb
 ndongmul2
 nmondop
+pdouble8
 scherrym
 scherrym12
 scherrymp
@@ -31165,7 +31184,7 @@ nfsug
 
 @source:misc/gluck2.cpp
 gluck2
-unkyungyu
+sise7
 
 @source:misc/gms.cpp
 baile
@@ -31627,6 +31646,7 @@ frtgenieb
 frtgeniec
 frtgenied
 jungleyo
+kingfrt
 magjack
 magjacka
 magjackb
@@ -32995,6 +33015,12 @@ spool99b
 spool99c
 vcarn
 
+@source:misc/spcforce.cpp
+meteor
+meteors
+spcforc2
+spcforce
+
 @source:misc/sprcros2.cpp
 sprcros2
 sprcros2a
@@ -33072,9 +33098,6 @@ pushover
 @source:misc/sumt8035.cpp
 sm_ngacc
 sm_ultng
-
-@source:misc/supertnk.cpp
-supertnk
 
 @source:misc/tapatune.cpp
 smartoss
@@ -33247,9 +33270,6 @@ vampire
 shadfgtr
 vcombat
 
-@source:misc/video21.cpp
-video21
-
 @source:misc/videoart.cpp
 videoart
 
@@ -33282,6 +33302,9 @@ vpoker
 
 @source:misc/vroulet.cpp
 vroulet
+
+@source:misc/whtm68k.cpp
+yizhix
 
 @source:misc/wildpkr.cpp
 tabpkr
@@ -36092,6 +36115,7 @@ hpierrot
 hpierrota
 omatsuri
 pldoraemon
+pllovegene
 plpittashi
 sluster2
 sweethrt
@@ -41163,6 +41187,7 @@ twinsqua
 wwanpanm
 wwanpanmo
 wwmarine
+wwpajero
 zunkyou
 
 @source:sega/segacoin.cpp
@@ -41671,6 +41696,7 @@ unomedal
 westdrmg
 
 @source:sega/segattl.cpp
+bmark
 fonz
 
 @source:sega/segaufo.cpp
@@ -44013,9 +44039,6 @@ vp415
 @source:skeleton/webtouchone.cpp
 wto2840sp
 
-@source:skeleton/whtm68k.cpp
-yizhix
-
 @source:skeleton/xbase09.cpp
 xbase09
 
@@ -45529,6 +45552,7 @@ bshark
 bsharkj
 bsharkjjs
 bsharku
+bsharkuo
 chasehq
 chasehqj
 chasehqju
@@ -46116,6 +46140,7 @@ tkdensho
 tkdenshoa
 
 @source:tecmo/tehkanwc.cpp
+aafootb
 gridiron
 teedoff
 teedoffj
@@ -47899,23 +47924,24 @@ tankbust
 @source:vectorgraphic/vector4.cpp
 vector4
 
-@source:venture/looping.cpp
-looping
-loopingv
-loopingva
-skybump
-
-@source:venture/spcforce.cpp
-meteor
-meteors
-spcforc2
-spcforce
-
 @source:verifone/tranz330.cpp
 tranz330
 
 @source:vidbrain/vidbrain.cpp
 vidbrain
+
+@source:videogames/looping.cpp
+looping
+loopingu
+loopingua
+loopingub
+skybump
+
+@source:videogames/supertnk.cpp
+supertnk
+
+@source:videogames/video21.cpp
+video21
 
 @source:videoton/tvc.cpp
 tvc64
