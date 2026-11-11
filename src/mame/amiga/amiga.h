@@ -14,25 +14,27 @@ Ernesto Corvi & Mariusz Wojcieszek
 
 #pragma once
 
-#include "cpu/m68000/m68000.h"
-#include "cpu/m68000/m68020.h"
-#include "cpu/m68000/m68030.h"
-#include "cpu/m68000/m68040.h"
-#include "machine/bankdev.h"
-#include "bus/rs232/rs232.h"
-#include "bus/centronics/ctronics.h"
-#include "machine/mos6526.h"
-#include "machine/msm6242.h"
-#include "machine/i2cmem.h"
-
 #include "agnus_copper.h"
 #include "akiko.h"
 #include "amigaaga.h"
 #include "paula.h"
 #include "paulafdc.h"
 
+#include "bus/centronics/ctronics.h"
+#include "bus/rs232/rs232.h"
+#include "cpu/m68000/m68000.h"
+#include "cpu/m68000/m68020.h"
+#include "cpu/m68000/m68030.h"
+#include "cpu/m68000/m68040.h"
+#include "machine/bankdev.h"
+#include "machine/i2cmem.h"
+#include "machine/mos6526.h"
+#include "machine/msm6242.h"
+
 #include "emupal.h"
 #include "screen.h"
+
+#include "endianness.h"
 
 
 /*
@@ -428,7 +430,7 @@ public:
 	uint16_t m_aga_sprdatb[8][4]{};
 	int m_aga_sprite_fetched_words = 0;
 	int m_aga_sprite_dma_used_words[8]{};
-	uint16_t m_aga_clxcon2;
+	uint16_t m_aga_clxcon2 = 0;
 
 	void video_start_common();
 	DECLARE_VIDEO_START( amiga );
@@ -500,7 +502,7 @@ public:
 		// standard htotal is $e3 x 2 -> 908
 		// https://videogameperfection.com/forums/topic/advanced-timing-settings-for-amiga/
 		SCREEN_WIDTH = 908,
-		SCREEN_HEIGHT_PAL = 625,
+		SCREEN_HEIGHT_PAL = 626,
 		SCREEN_HEIGHT_NTSC = 525,
 		VBLANK_PAL = 58, // 52
 		VBLANK_NTSC = 42,
@@ -528,9 +530,9 @@ protected:
 	// read them on both big-endian and little-endian systems, we store the custom
 	// registers in 32-bit natural order. This means we need to XOR the register
 	// address with 1 on little-endian systems.
-	uint16_t &CUSTOM_REG(offs_t x) { return m_custom_regs[BYTE_XOR_BE(x)]; }
+	uint16_t &CUSTOM_REG(offs_t x) { return util::big_endian_cast<uint16_t>(m_custom_regs)[x]; }
 	int16_t &CUSTOM_REG_SIGNED(offs_t x) { return (int16_t &)CUSTOM_REG(x); }
-	uint32_t &CUSTOM_REG_LONG(offs_t x) { return *(uint32_t *)&m_custom_regs[x]; }
+	uint32_t &CUSTOM_REG_LONG(offs_t x) { return m_custom_regs[x >> 1]; }
 
 	// agnus/alice chip id
 	enum
@@ -619,7 +621,7 @@ protected:
 	int m_cia_0_irq = 0;
 	int m_cia_1_irq = 0;
 
-	uint16_t m_custom_regs[256]{};
+	uint32_t m_custom_regs[256/2]{};
 	static const char *const s_custom_reg_names[0x100];
 
 	void ocs_map(address_map &map) ATTR_COLD;

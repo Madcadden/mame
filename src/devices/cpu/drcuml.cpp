@@ -2,7 +2,7 @@
 // copyright-holders:Aaron Giles
 /***************************************************************************
 
-    drcuml.c
+    drcuml.cpp
 
     Universal machine language for dynamic recompiling CPU cores.
 
@@ -37,11 +37,13 @@
 #include "drcbearm64.h"
 #include "drcbec.h"
 #include "drcbex64.h"
-#include "drcbex86.h"
 
 #include "emuopts.h"
 
+#include <iostream>
 #include <fstream>
+#include <locale>
+#include <sstream>
 
 
 
@@ -58,21 +60,42 @@
 //**************************************************************************
 
 // determine the type of the native DRC, falling back to C
-#ifndef NATIVE_DRC
+#if !defined(NATIVE_DRC)
 #if !defined(MAME_NOASM) && (defined(__x86_64__) || defined(_M_X64))
 #define NATIVE_DRC drcbe_x64
-#elif !defined(MAME_NOASM) && (defined(__i386__) || defined(_M_IX86))
-#define NATIVE_DRC drcbe_x86
 #elif !defined(MAME_NOASM) && (defined(__aarch64__) || defined(_M_ARM64))
 #define NATIVE_DRC drcbe_arm64
 #else
 #define NATIVE_DRC drcbe_c
 #endif
-#endif
+#endif // !defined(NATIVE_DRC)
 
 #define MAKE_DRCBE_IMPL(name) make_##name
 #define MAKE_DRCBE(name) MAKE_DRCBE_IMPL(name)
 #define make_drcbe_native MAKE_DRCBE(NATIVE_DRC)
+
+
+
+namespace {
+
+std::string uml_log_name(device_t &device)
+{
+	std::string tag = device.tag();
+	for (auto &ch : tag)
+	{
+		if (':' == ch)
+			ch = '_';
+	}
+	std::ostringstream str;
+	str.imbue(std::locale::classic());
+	str << "drcuml_" << device.shortname();
+	if ('_' != tag[0])
+		str << '_';
+	str << tag << ".asm";
+	return std::move(str).str();
+}
+
+} // anonymous namespace
 
 
 
@@ -89,7 +112,7 @@ drcbe_interface::drcbe_interface(drcuml_state &drcuml, drc_cache &cache, device_
 	, m_cache(cache)
 	, m_device(device)
 	, m_space()
-	, m_state(*reinterpret_cast<drcuml_machine_state *>(cache.alloc_near(sizeof(m_state))))
+	, m_state(*cache.alloc_near<drcuml_machine_state>())
 {
 	// reset the machine state
 	memset(&m_state, 0, sizeof(m_state));
@@ -119,24 +142,74 @@ drcbe_interface::~drcbe_interface()
 }
 
 
+//-------------------------------------------------
+//  hash_get_codeptr
+//-------------------------------------------------
+
+drcbe_interface::hash_codeptr drcbe_interface::hash_get_codeptr(u32 mode, u32 pc) const noexcept
+{
+	return hash_codeptr();
+}
+
+
+//-------------------------------------------------
+//  hash_set_codeptr
+//-------------------------------------------------
+
+bool drcbe_interface::hash_set_codeptr(u32 mode, u32 pc, hash_codeptr code) noexcept
+{
+	return false;
+}
+
+
 
 //**************************************************************************
 //  DRCUML STATE
 //**************************************************************************
 
+// symbol class
+class drcuml_state::symbol
+{
+public:
+	// construction/destruction
+	symbol(void *base, u32 length, std::string &&name)
+		: m_base(reinterpret_cast<drccodeptr>(base))
+		, m_length(length)
+		, m_name(std::move(name))
+	{ }
+
+	// getters
+	bool includes(drccodeptr search) const { return (m_base <= search) && ((m_base + m_length) > search); }
+	drccodeptr base() const { return m_base; }
+	std::string const &name() const { return m_name; }
+
+private:
+	// internal state
+	drccodeptr  m_base;     // base of the symbol
+	u32         m_length;   // length of the region covered
+	std::string m_name;     // name of the symbol
+};
+
+class drcuml_state::block_impl : public drcuml_block
+{
+public:
+	block_impl(drcuml_state &drcuml, u32 maxinst) : drcuml_block(drcuml, *drcuml.m_beintf, maxinst)
+	{ }
+	~block_impl() = default;
+
+	using drcuml_block::begin;
+};
+
+
 //-------------------------------------------------
 //  drcuml_state - constructor
 //-------------------------------------------------
 
-drcuml_state::drcuml_state(device_t &device, drc_cache &cache, u32 flags, int modes, int addrbits, int ignorebits)
+drcuml_state::drcuml_state(device_t &device, std::size_t cache_bytes)
 	: m_device(device)
-	, m_cache(cache)
-	, m_beintf(device.machine().options().drc_use_c()
-			? drc::make_drcbe_c(*this, device, cache, flags, modes, addrbits, ignorebits)
-			: drc::make_drcbe_native(*this, device, cache, flags, modes, addrbits, ignorebits))
-	, m_umllog(device.machine().options().drc_log_uml()
-			? new std::ofstream(util::string_format("drcuml_%s.asm", device.shortname()))
-			: nullptr)
+	, m_cache(cache_bytes)
+	, m_beintf()
+	, m_umllog()
 	, m_blocklist()
 	, m_handlelist()
 	, m_symlist()
@@ -154,6 +227,31 @@ drcuml_state::~drcuml_state()
 
 
 //-------------------------------------------------
+//  initialize - allocate the cache and create the
+//  back-end
+//-------------------------------------------------
+
+void drcuml_state::initialize(u32 flags, int modes, int addrbits, int ignorebits, u32 max_sequence_length)
+{
+	assert(!m_beintf);
+	assert(!m_umllog);
+
+	m_cache.allocate_cache(device().machine().options().drc_rwx());
+
+	if (device().machine().options().drc_use_c())
+		m_beintf = drc::make_drcbe_c(*this, device(), m_cache, flags, modes, addrbits, ignorebits, max_sequence_length);
+	else
+		m_beintf = drc::make_drcbe_native(*this, device(), m_cache, flags, modes, addrbits, ignorebits, max_sequence_length);
+
+	if (device().machine().options().drc_log_uml())
+	{
+		m_umllog.reset(new std::ofstream(uml_log_name(device())));
+		m_umllog->imbue(std::locale::classic());
+	}
+}
+
+
+//-------------------------------------------------
 //  reset - reset the state completely, flushing
 //  the cache and all information
 //-------------------------------------------------
@@ -166,16 +264,19 @@ void drcuml_state::reset()
 		// flush the cache
 		m_cache.flush();
 
-		// reset all handle code pointers
+		// reset all transient handle code pointers
 		for (uml::code_handle &handle : m_handlelist)
-			*handle.codeptr_addr() = nullptr;
+		{
+			if (*handle.codeptr_addr() >= m_cache.top())
+				*handle.codeptr_addr() = nullptr;
+		}
 
 		// call the backend to reset
 		m_beintf->reset();
 	}
-	catch (drcuml_block::abort_compilation &)
+	catch (drcuml_block::abort_compilation const &)
 	{
-		fatalerror("Out of cache space in drcuml_state::reset\n");
+		throw emu_fatalerror("Out of cache space in drcuml_state::reset\n");
 	}
 }
 
@@ -184,22 +285,24 @@ void drcuml_state::reset()
 //  begin_block - begin a new code block
 //-------------------------------------------------
 
-drcuml_block &drcuml_state::begin_block(uint32_t maxinst)
+drcuml_block &drcuml_state::begin_block(uint32_t maxinst, bool invariant)
 {
 	// find an inactive block that matches our qualifications
-	drcuml_block *bestblock(nullptr);
-	for (drcuml_block &block : m_blocklist)
+	block_impl *bestblock(nullptr);
+	for (block_impl &block : m_blocklist)
 	{
 		if (!block.inuse() && (block.maxinst() >= maxinst) && (!bestblock || (block.maxinst() < bestblock->maxinst())))
 			bestblock = &block;
 	}
 
 	// if we failed to find one, allocate a new one
+	// TODO: over-allocation was supposed to be * 3 / 2 but it was getting squared, and now things depend on it
+	// every use of begin_block needs to be reviewed to ensure maxinst is reasonable
 	if (!bestblock)
-		bestblock = &*m_blocklist.emplace(m_blocklist.end(), *this, maxinst * 3 / 2);
+		bestblock = &*m_blocklist.emplace(m_blocklist.end(), *this, maxinst * 9 / 4);
 
 	// start the block
-	bestblock->begin();
+	bestblock->begin(invariant);
 	return *bestblock;
 }
 
@@ -279,11 +382,13 @@ void drcuml_state::log_vprintf(util::format_argument_pack<char> const &args)
 //  drcuml_block - constructor
 //-------------------------------------------------
 
-drcuml_block::drcuml_block(drcuml_state &drcuml, u32 maxinst)
+drcuml_block::drcuml_block(drcuml_state &drcuml, drcbe_interface &backend, u32 maxinst)
 	: m_drcuml(drcuml)
+	, m_backend(backend)
+	, m_maxinst(maxinst)
 	, m_nextinst(0)
-	, m_maxinst(maxinst * 3/2)
-	, m_inst(m_maxinst)
+	, m_inst(new uml::instruction[m_maxinst])
+	, m_invariant(false)
 	, m_inuse(false)
 {
 }
@@ -302,11 +407,12 @@ drcuml_block::~drcuml_block()
 //  begin - begin code generation
 //-------------------------------------------------
 
-void drcuml_block::begin()
+void drcuml_block::begin(bool invariant)
 {
-	// set up the block information and return it
-	m_inuse = true;
+	// set up the block information
 	m_nextinst = 0;
+	m_invariant = invariant;
+	m_inuse = true;
 }
 
 
@@ -327,8 +433,7 @@ void drcuml_block::end()
 		disassemble();
 
 	// generate the code via the back-end
-	m_drcuml.cache().codegen_init();
-	m_drcuml.generate(*this, &m_inst[0], m_nextinst);
+	m_backend.generate(*this, &m_inst[0], m_nextinst);
 
 	// block is no longer in use
 	m_inuse = false;
@@ -355,14 +460,9 @@ void drcuml_block::abort()
 //  append - append an opcode to the block
 //-------------------------------------------------
 
-uml::instruction &drcuml_block::append()
+void drcuml_block::overrun()
 {
-	// get a pointer to the next instruction
-	uml::instruction &curinst(m_inst[m_nextinst++]);
-	if (m_nextinst > m_maxinst)
-		fatalerror("Overran maxinst in drcuml_block_append\n");
-
-	return curinst;
+	throw emu_fatalerror("Overran maxinst in drcuml_block_append\n");
 }
 
 

@@ -104,8 +104,8 @@ super555: https://www.youtube.com/watch?v=CCUKdbQ5O-U
 #include "emu.h"
 
 #include "cpu/m68000/m68000.h"
-#include "cpu/mcs51/mcs51.h"
-#include "cpu/pic16x8x/pic16x8x.h"
+#include "cpu/mcs51/i80c51.h"
+#include "cpu/pic16_mid/pic16_mid.h"
 #include "machine/eepromser.h"
 #include "machine/ticket.h"
 #include "sound/okim6295.h"
@@ -175,6 +175,7 @@ public:
 	void init_rbspm() ATTR_COLD;
 	void init_sball2k1() ATTR_COLD;
 	void init_sglc() ATTR_COLD;
+	void init_sjms() ATTR_COLD;
 	void init_smwc() ATTR_COLD;
 	void init_ssanguoj() ATTR_COLD;
 	void init_sscs() ATTR_COLD;
@@ -228,7 +229,7 @@ private:
 	uint16_t m_input_matrix = 0;
 	//uint16_t m_prot_data = 0;
 
-	void mcu_io(address_map &map) ATTR_COLD;
+	void mcu_data(address_map &map) ATTR_COLD;
 	void rbmk_mem(address_map &map) ATTR_COLD;
 	void rbspm_mem(address_map &map) ATTR_COLD;
 	void ssanguoj_mem(address_map &map) ATTR_COLD;
@@ -240,9 +241,9 @@ private:
 	void input_matrix_w(uint16_t data);
 	void tilebank_w(uint16_t data);
 	void reels_toggle_w(uint16_t data);
-	uint8_t mcu_io_r(offs_t offset);
-	void mcu_io_w(offs_t offset, uint8_t data);
-	void mcu_io_mux_w(uint8_t data);
+	uint8_t mcu_data_r(offs_t offset);
+	void mcu_data_w(offs_t offset, uint8_t data);
+	void mcu_data_mux_w(uint8_t data);
 	uint16_t eeprom_r();
 	void eeprom_w(uint16_t data);
 	void hgly_eeprom_w(uint16_t data);
@@ -439,6 +440,13 @@ void gms_2layers_state::eeprom_w(uint16_t data)
 			}
 			m_eeprom_command = data;
 		}
+		// additional commands checked by jinpaish
+		else if (data == 0x7a)
+			m_eeprom_data[0] = ~m_eeprom_data[0] | m_eeprom_data[2];
+		else if (data == 0x6a)
+			m_eeprom_data[0] = m_eeprom_data[0] & m_eeprom_data[2];
+		else if (data == 0x00)
+			m_eeprom_command = 0;
 		else
 			logerror("%s: Unknown EEPROM command %02X\n", machine().describe_context(), data);
 	}
@@ -638,7 +646,7 @@ void gms_2layers_state::smatch03_mem(address_map &map)
 }
 
 
-uint8_t gms_2layers_state::mcu_io_r(offs_t offset)
+uint8_t gms_2layers_state::mcu_data_r(offs_t offset)
 {
 	if (m_mux_data & 8)
 	{
@@ -656,7 +664,7 @@ uint8_t gms_2layers_state::mcu_io_r(offs_t offset)
 	return 0xff;
 }
 
-void gms_2layers_state::mcu_io_w(offs_t offset, uint8_t data)
+void gms_2layers_state::mcu_data_w(offs_t offset, uint8_t data)
 {
 	if (m_mux_data & 8) { m_ymsnd->write(offset & 1, data); }
 	else if (m_mux_data & 4)
@@ -668,14 +676,14 @@ void gms_2layers_state::mcu_io_w(offs_t offset, uint8_t data)
 		printf("Warning: mux data W = %02x", m_mux_data);
 }
 
-void gms_2layers_state::mcu_io_mux_w(uint8_t data)
+void gms_2layers_state::mcu_data_mux_w(uint8_t data)
 {
 	m_mux_data = ~data;
 }
 
-void gms_2layers_state::mcu_io(address_map &map)
+void gms_2layers_state::mcu_data(address_map &map)
 {
-	map(0x0ff00, 0x0ffff).rw(FUNC(gms_2layers_state::mcu_io_r), FUNC(gms_2layers_state::mcu_io_w));
+	map(0x0ff00, 0x0ffff).rw(FUNC(gms_2layers_state::mcu_data_r), FUNC(gms_2layers_state::mcu_data_w));
 }
 
 
@@ -2597,8 +2605,6 @@ GFXDECODE_END
 
 void gms_2layers_state::machine_start()
 {
-	m_lamps.resolve();
-
 	save_item(NAME(m_reels_toggle));
 	save_item(NAME(m_tilebank));
 	save_item(NAME(m_mux_data));
@@ -2735,12 +2741,12 @@ void gms_2layers_state::rbmk(machine_config &config)
 	m_maincpu->set_vblank_int("screen", FUNC(gms_2layers_state::irq1_line_hold));
 
 	AT89C4051(config, m_mcu, 22_MHz_XTAL / 4); // frequency isn't right
-	m_mcu->set_addrmap(AS_IO, &gms_2layers_state::mcu_io);
-	m_mcu->port_out_cb<3>().set(FUNC(gms_2layers_state::mcu_io_mux_w));
+	m_mcu->set_addrmap(AS_DATA, &gms_2layers_state::mcu_data);
+	m_mcu->port_out_cb<3>().set(FUNC(gms_2layers_state::mcu_data_mux_w));
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_rbmk);
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_refresh_hz(58);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(64*8, 32*8);
@@ -2862,9 +2868,9 @@ ROM_START( rbspm ) // PCB NO.6899-B
 	ROM_REGION( 0x1000, "mcu", 0 ) // protected MCU
 	ROM_LOAD( "mj-dfmj_at89c51.bin", 0x0000, 0x1000, CRC(c6c48161) SHA1(c3ecf998820d758286b18896ff7860221dd0cf43) ) // decapped
 
-	ROM_REGION( 0x4280, "pic", 0 ) // pic was populated on this board
-	ROM_LOAD( "c016_pic16f84_code.bin", 0x000, 0x800, CRC(1eb5cd2b) SHA1(9e747235e39eaea337f9325fa55fbfec1c03168d) )
-	ROM_LOAD( "c016_pic16f84_data.bin", 0x800, 0x080, CRC(ee882e11) SHA1(aa5852a95a89b17270bb6f315dfa036f9f8155cf) )
+	ROM_REGION16_LE( 0x4280, "pic", ROMREGION_ERASEFF ) // pic was populated on this board
+	ROM_LOAD( "c016_pic16f84_code.bin", 0x0000, 0x0800, CRC(1eb5cd2b) SHA1(9e747235e39eaea337f9325fa55fbfec1c03168d) )
+	ROM_LOAD( "c016_pic16f84_data.bin", 0x4200, 0x0080, CRC(ee882e11) SHA1(aa5852a95a89b17270bb6f315dfa036f9f8155cf) )
 
 	ROM_REGION( 0x20000, "user1", 0 ) // ??? MCU data / code
 	ROM_LOAD( "mj-dfmj-2.2-xx.bin", 0x00000, 0x20000,  CRC(58a9eea2) SHA1(1a251e9b049bc8dafbc0728b3d876fdd5a1c8dd9) )
@@ -3349,6 +3355,28 @@ ROM_START( tbss )
 	ROM_REGION( 0x100000, "gfx2", ROMREGION_ERASE00)
 	// u29 not populated
 	ROM_LOAD( "u39", 0x80000, 0x80000, CRC(4be91081) SHA1(0a3691bb2c7b5ba7fb5617cb16aacecb2fa93519) )
+
+	ROM_REGION16_BE( 0x80, "eeprom", 0 )
+	ROM_LOAD16_WORD_SWAP( "93c46.u136", 0x00, 0x080, CRC(2c2e0cde) SHA1(ec59968b95131b35137fd948ae73e0d022dfc4b3) )
+ROM_END
+
+// 神机妙算 (Shénjī Miàosuàn)
+ROM_START( sjms )
+	ROM_REGION( 0x80000, "maincpu", 0 ) // 68000 code
+	ROM_LOAD( "u64", 0x00000, 0x80000, CRC(da94db1f) SHA1(33463e88645aedb5551cf17ef1960b47a784deaa) ) // no label
+
+	ROM_REGION( 0x080000, "oki", 0 )
+	ROM_LOAD( "bj-s1-s02.u83", 0x00000, 0x80000, CRC(831b021d) SHA1(ee2f13a4eb8e17a7d8328fa916d1c0bc0888384f) ) // same as tbss
+
+	ROM_REGION( 0x180000, "gfx1", 0 )
+	ROM_LOAD( "bj-a1-a06.u41", 0x000000, 0x100000, CRC(f758d95e) SHA1(d1da16f3ef618a8c1118784bdc39dd93acf86aff) ) // same as tbss
+
+	ROM_REGION( 0x100000, "gfx2", ROMREGION_ERASE00)
+	// u29 not populated
+	ROM_LOAD( "5.u39", 0x80000, 0x80000, CRC(6b07843c) SHA1(70c873828fcf7222f617eae0edd0cfb6b1218ba1) )
+
+	ROM_REGION16_BE( 0x80, "eeprom", 0 )
+	ROM_LOAD16_WORD_SWAP( "93c46.u136", 0x00, 0x080, CRC(82649062) SHA1(6093da95e0201277f4603147c7898e55e00c3091) )
 ROM_END
 
 // 三国列车 (Sānguó Lièchē)
@@ -3366,6 +3394,9 @@ ROM_START( sglc )
 	ROM_REGION( 0x100000, "gfx2", ROMREGION_ERASE00)
 	// u29 not populated
 	ROM_LOAD( "t1_0_6b65.u39", 0x80000, 0x80000, CRC(5c703544) SHA1(2bd10804f0a2df577e0494274e5f89ffba850393) )
+
+	ROM_REGION16_BE( 0x80, "eeprom", 0 )
+	ROM_LOAD16_WORD_SWAP( "93c46.u136", 0x00, 0x080, CRC(fd7411c6) SHA1(ce70ab4f0372679cfcb639d8b706cf8403736580) )
 ROM_END
 
 
@@ -3398,9 +3429,9 @@ ROM_END
 
 void gms_2layers_state::init_rbspm()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
-	// 0x REPAIR
+	// HACK: 0x REPAIR
 	rom[0x00520 / 2] = 0x600a;
 	rom[0x00772 / 2] = 0x4e71;
 	rom[0x00774 / 2] = 0x4e71;
@@ -3411,13 +3442,15 @@ void gms_2layers_state::init_ssanguoj()
 {
 	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
 
+	// HACK: patch protection check
 	rom[0x2fc0 / 2] = 0x6000; // loops endlessly after ROM / RAM test
 }
 
 void gms_2layers_state::init_sball2k1()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection checks
 	rom[0x14f6c / 2] = 0x4e71; // U135 ERROR
 	rom[0x14f6e / 2] = 0x4e71; // U135 ERROR
 	rom[0x14f9a / 2] = 0x6000; // U136 ERROR
@@ -3427,9 +3460,9 @@ void gms_2layers_state::init_sball2k1()
 
 void gms_3layers_state::init_baile()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
-	// U135 ERROR
+	// HACK: U135 ERROR
 	rom[0xb494 / 2] = 0x6000;
 	rom[0xb4a6 / 2] = 0x4e71;
 	rom[0xb4a8 / 2] = 0x4e71;
@@ -3439,9 +3472,9 @@ void gms_3layers_state::init_baile()
 
 void gms_3layers_state::init_jinpaish()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
-	// U135 ERROR
+	// HACK: U135 ERROR
 	rom[0x319f0 / 2] = 0x4e71;
 	rom[0x319f2 / 2] = 0x4e71;
 	rom[0x31a0a / 2] = 0x6000;
@@ -3450,7 +3483,7 @@ void gms_3layers_state::init_jinpaish()
 	rom[0x31f4a / 2] = 0x4e71;
 	rom[0x31f4c / 2] = 0x4e71;
 
-	// U181 ERROR
+	// HACK: U181 ERROR
 	rom[0x31f64 / 2] = 0x6000;
 	rom[0x31f74 / 2] = 0x4e71;
 	rom[0x31f76 / 2] = 0x4e71;
@@ -3458,15 +3491,15 @@ void gms_3layers_state::init_jinpaish()
 
 void gms_3layers_state::init_sc2in1()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
-	// U135 ERROR
+	// HACK: U135 ERROR
 	rom[0x45f46 / 2] = 0x4e71;
 	rom[0x45f48 / 2] = 0x4e71;
 	rom[0x46818 / 2] = 0x4e71;
 	rom[0x4681a / 2] = 0x4e71;
 
-	// U181 ERROR
+	// HACK: U181 ERROR
 	rom[0x45f70 / 2] = 0x4e71;
 	rom[0x45f72 / 2] = 0x4e71;
 	rom[0x46842 / 2] = 0x4e71;
@@ -3475,9 +3508,9 @@ void gms_3layers_state::init_sc2in1()
 
 void gms_3layers_state::init_yyhm()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
-	// REPAIR ERROR
+	// HACK: REPAIR ERROR
 	rom[0x9a2 / 2] = 0x6000;
 	rom[0x9b4 / 2] = 0x4e71;
 	rom[0x9b6 / 2] = 0x4e71;
@@ -3489,16 +3522,18 @@ void gms_3layers_state::init_yyhm()
 
 void gms_2layers_state::init_super555()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection check
 	rom[0x46f54 / 2] = 0x6000; // loops endlessly after ROM / RAM test
 	rom[0x4782e / 2] = 0x6000; // 0x0A U135 ERROR
 }
 
 void gms_2layers_state::init_ballch()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection check
 	rom[0x1225e / 2] = 0x6000; // U64 U136 ERROR
 	rom[0x122b4 / 2] = 0x6000; // "
 	rom[0x12ee6 / 2] = 0x6026; // U135 ERROR
@@ -3506,8 +3541,9 @@ void gms_2layers_state::init_ballch()
 
 void gms_2layers_state::init_cots()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection checks
 	rom[0x1868e / 2] = 0x6000; // U64 U136 ERROR
 	rom[0x198f6 / 2] = 0x62fe; // "
 	rom[0x19566 / 2] = 0x62fe; // A88 ERROR U135 ERROR
@@ -3519,8 +3555,9 @@ void gms_2layers_state::init_cots()
 
 void gms_2layers_state::init_sscs()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection checks
 	rom[0x1c06 / 2] = 0x6008; // loops endlessly later on
 	rom[0x32b2 / 2] = 0x6000; // loops endlessly after ROM / RAM test
 	rom[0xcc1c / 2] = 0x6000; // U135 ERROR
@@ -3535,8 +3572,9 @@ void gms_2layers_state::init_sscs()
 
 void gms_2layers_state::init_sscs0118()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection checks
 	rom[0x1af6 / 2] = 0x6008; // loops endlessly later on
 	rom[0x3d22 / 2] = 0x6000; // loops endlessly after ROM / RAM test
 	rom[0xd6b2 / 2] = 0x6000; // U135 ERROR
@@ -3553,8 +3591,9 @@ void gms_2layers_state::init_sscs0118()
 
 void gms_2layers_state::init_cjdlz()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection checks
 	rom[0x00518 / 2] = 0x4e71; // 0xD REPAIR
 	rom[0x0c628 / 2] = 0x6000; // 0x99 REPAIR
 	rom[0x0c8e6 / 2] = 0x4e71; // loop
@@ -3567,8 +3606,9 @@ void gms_2layers_state::init_cjdlz()
 
 void gms_2layers_state::init_smwc()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection checks
 	rom[0x00518 / 2] = 0x4e71; // 0xD REPAIR
 	rom[0x0a348 / 2] = 0x6000; // 0x99 REPAIR
 	rom[0x0a610 / 2] = 0x4e71; // loop
@@ -3583,8 +3623,9 @@ void gms_2layers_state::init_smwc()
 
 void gms_2layers_state::init_hgly()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection checks
 	rom[0x0feda / 2] = 0x6004; // U35 ERROR
 	rom[0x10128 / 2] = 0x6004; // U36 ERROR
 	rom[0x1393e / 2] = 0x6000; // U64 ERROR
@@ -3593,9 +3634,10 @@ void gms_2layers_state::init_hgly()
 
 void gms_2layers_state::init_tbss()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
-	rom[0x11b8 / 2] = 0x6000;
+	// HACK: patch protection checks
+	rom[0x11ba / 2] = 0x6000;
 	rom[0x12c2 / 2] = 0x6000;
 	rom[0x1634 / 2] = 0x6000;
 	rom[0x164e / 2] = 0x6000;
@@ -3607,9 +3649,25 @@ void gms_2layers_state::init_tbss()
 
 void gms_2layers_state::init_sglc()
 {
-	uint16_t *rom = (uint16_t *)memregion("maincpu")->base();
+	uint16_t *rom = &memregion("maincpu")->as_u16();
 
+	// HACK: patch protection check
 	rom[0x129a2 / 2] = 0x4e71;
+}
+
+void gms_2layers_state::init_sjms()
+{
+	uint16_t *rom = &memregion("maincpu")->as_u16();
+
+	// HACK: patch protection checks
+	rom[0x11ba / 2] = 0x6000;
+	rom[0x12c2 / 2] = 0x6000;
+	rom[0x1630 / 2] = 0x6000;
+	rom[0x164a / 2] = 0x6000;
+	rom[0x1b5e / 2] = 0x6000;
+	rom[0x1eb6 / 2] = 0x6000;
+	rom[0x1ed0 / 2] = 0x6000;
+	rom[0x9706 / 2] = 0x6000;
 }
 
 } // anonymous namespace
@@ -3625,6 +3683,7 @@ GAME( 2005, yyhm,     0,    magslot,  yyhm,     gms_3layers_state, init_yyhm,   
 
 // card games
 GAME( 1998, tbss,     0,    super555, super555, gms_2layers_state, init_tbss,     ROT0,  "GMS", "Tieban Shensuan (Mainland version 2.0)",                MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING )                  // stops during boot, patched for now. EEPROM interface doesn't quite work.
+GAME( 1998, sjms,     0,    super555, super555, gms_2layers_state, init_sjms,     ROT0,  "GMS", "Shenji Miaosuan (Mainland version 2.0)",                MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING )                  // stops during boot, patched for now. EEPROM interface doesn't quite work.
 GAME( 1999, super555, 0,    super555, super555, gms_2layers_state, init_super555, ROT0,  "GMS", "Super 555 (English version V1.5)",                      MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING )                  // stops during boot, patched for now.
 GAME( 1999, sscs,     0,    super555, sscs,     gms_2layers_state, init_sscs,     ROT0,  "GMS", "San Se Caishen (Version 0502)",                         MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING )                  // stops during boot, patched for now. EEPROM interface isn't fully understood.
 GAME( 1999, sscs0118, sscs, super555, sscs,     gms_2layers_state, init_sscs0118, ROT0,  "GMS", "San Se Caishen (Version 0118)",                         MACHINE_UNEMULATED_PROTECTION | MACHINE_NOT_WORKING )                  // stops during boot, patched for now. EEPROM interface isn't fully understood.

@@ -192,9 +192,9 @@ Notes:
      TEXELFX - 3DFX 500-0004-02 BD0665.1 TMU (QFP208)
      PIXELFX - 3DFX 500-0003-03 F001701.1 FBI (QFP240)
       001604 - Konami Custom (QFP208)
-       MC44200FT - Motorola MC44200FT 3 Channel Video D/A Converter (QFP44)
+   MC44200FT - Motorola MC44200FT 3 Channel Video D/A Converter (QFP44)
      MACH111 - AMD MACH111 CPLD (Stamped '03161A', PLCC44)
-    PLCC44_SOCKET - empty PLCC44 socket
+   PLCC44_SOCKET - empty PLCC44 socket
       AV9170 - Integrated Circuit Systems Inc. Clock Multiplier (SOIC8)
       AM7201 - AMD AM7201 FIFO (PLCC32)
         PAL1 - AMD PALCE16V8 (stamped 'N676B4', DIP20)
@@ -240,7 +240,7 @@ Thrill Drive 713A13  -       713A14  -
 #include "machine/x76f041.h"
 #include "sound/k056800.h"
 #include "sound/rf5c400.h"
-#include "video/voodoo.h"
+#include "video/voodoo_pci.h"
 
 #include "emupal.h"
 #include "screen.h"
@@ -261,7 +261,8 @@ public:
 		m_k001604(*this, "k001604_%u", 1U),
 		m_konppc(*this, "konppc"),
 		m_adc12138(*this, "adc12138"),
-		m_voodoo(*this, "voodoo%u", 0U),
+		m_voodoo(*this, "pci%u:00.0", 0U),
+		m_k033906(*this, "pci%u:host", 0U),
 		m_palette(*this, "palette%u", 1U),
 		m_sharc_dataram(*this, "sharc%u_dataram", 0U),
 		m_jvs_host(*this, "jvs_host"),
@@ -271,6 +272,7 @@ public:
 		m_dsw(*this, "DSW"),
 		m_analog(*this, "ANALOG%u", 1U),
 		m_pcb_digit(*this, "pcbdigit%u", 0U),
+		m_wheel_motor(*this, "wheel_motor"),
 		m_cg_view(*this, "cg_view")
 	{ }
 
@@ -296,7 +298,8 @@ private:
 	required_device_array<k001604_device, 2> m_k001604;
 	required_device<konppc_device> m_konppc;
 	required_device<adc12138_device> m_adc12138;
-	required_device_array<generic_voodoo_device, 2> m_voodoo;
+	required_device_array<voodoo_pci_device, 2> m_voodoo;
+	required_device_array<k033906_device, 2> m_k033906;
 	required_device_array<palette_device, 2> m_palette;
 	optional_shared_ptr_array<uint32_t, 2> m_sharc_dataram;
 	required_device<konppc_jvs_host_device> m_jvs_host;
@@ -306,6 +309,7 @@ private:
 	required_ioport m_dsw;
 	required_ioport_array<5> m_analog;
 	output_finder<2> m_pcb_digit;
+	output_finder<> m_wheel_motor;
 	memory_view m_cg_view;
 
 	bool m_sound_irq_enabled = false;
@@ -333,8 +337,8 @@ uint32_t nwktr_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap,
 
 	int const board = m_exrgb ? 1 : 0;
 
-	m_voodoo[board]->update(bitmap, cliprect);
-	m_k001604[0]->draw_front_layer(screen, bitmap, cliprect);   // K001604 on slave board doesn't seem to output anything. Bug or intended?
+	m_voodoo[board]->screen_update(screen, bitmap, cliprect);
+	m_k001604[0]->draw_front_layer(screen, bitmap, cliprect); // K001604 on slave board doesn't seem to output anything. Bug or intended?
 
 	return 0;
 }
@@ -377,7 +381,12 @@ void nwktr_state::sysreg_w(offs_t offset, uint8_t data)
 	{
 		case 0:
 		case 1:
-			m_pcb_digit[offset] = bitswap<7>(~data , 0, 1, 2, 3, 4, 5, 6);
+			m_pcb_digit[offset] = bitswap<7>(~data, 0, 1, 2, 3, 4, 5, 6);
+			break;
+
+		case 2:
+			// NWK-TR drive commands
+			m_wheel_motor = data;
 			break;
 
 		case 3:
@@ -416,7 +425,7 @@ void nwktr_state::sysreg_w(offs_t offset, uint8_t data)
 			// Racing Jam sets CG board ID to 2 when writing to the tilemap chip.
 			// This could mean broadcast to both CG boards?
 
-			m_exrgb = BIT(data, 0);       // Select which CG Board outputs signal
+			m_exrgb = BIT(data, 0); // Select which CG Board outputs signal
 
 			m_cg_view.select(m_konppc->get_cgboard_id() ? 1 : 0);
 			break;
@@ -448,8 +457,6 @@ void nwktr_state::soundtimer_ack_w(uint16_t data)
 
 void nwktr_state::machine_start()
 {
-	m_pcb_digit.resolve();
-
 	// set conservative DRC options
 	m_maincpu->ppcdrc_set_options(PPCDRC_COMPATIBLE_OPTIONS);
 
@@ -645,16 +652,17 @@ void nwktr_state::nwktr(machine_config &config)
 
 	config.set_maximum_quantum(attotime::from_hz(9000));
 
-	M48T58(config, "m48t58", 0);
+	M48T58(config, "m48t58");
 
-	ADC12138(config, m_adc12138, 0);
+	ADC12138(config, m_adc12138);
 	m_adc12138->set_ipt_convert_callback(FUNC(nwktr_state::adc12138_input_callback));
 
-	K033906(config, "k033906_1", 0, m_voodoo[0]);
-	K033906(config, "k033906_2", 0, m_voodoo[1]);
-
 	// video hardware
-	VOODOO_1(config, m_voodoo[0], 50_MHz_XTAL);
+	PCI_ROOT(config, "pci0");
+	K033906(config, m_k033906[0]);
+
+	VOODOO_1_PCI(config, m_voodoo[0], 0);
+	m_voodoo[0]->set_ids(0x121a0001, 0x02, 0x040000, 0); // Konami firmware requires the multimedia class
 	m_voodoo[0]->set_fbmem(2);
 	m_voodoo[0]->set_tmumem(2,2);
 	m_voodoo[0]->set_status_cycles(1000); // optimization to consume extra cycles when polling status
@@ -663,7 +671,11 @@ void nwktr_state::nwktr(machine_config &config)
 	m_voodoo[0]->vblank_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ0);
 	m_voodoo[0]->stall_callback().set(m_dsp[0], FUNC(adsp21062_device::write_stall));
 
-	VOODOO_1(config, m_voodoo[1], 50_MHz_XTAL);
+	PCI_ROOT(config, "pci1");
+	K033906(config, m_k033906[1]);
+
+	VOODOO_1_PCI(config, m_voodoo[1], 0);
+	m_voodoo[1]->set_ids(0x121a0001, 0x02, 0x040000, 0); // Konami firmware requires the multimedia class
 	m_voodoo[1]->set_fbmem(2);
 	m_voodoo[1]->set_tmumem(2,2);
 	m_voodoo[1]->set_status_cycles(1000); // optimization to consume extra cycles when polling status
@@ -672,7 +684,7 @@ void nwktr_state::nwktr(machine_config &config)
 	m_voodoo[1]->vblank_callback().set_inputline(m_maincpu, INPUT_LINE_IRQ1);
 	m_voodoo[1]->stall_callback().set(m_dsp[1], FUNC(adsp21062_device::write_stall));
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	// default 24KHz parameter in both 001604 and voodoo, input clock correct? (58~Hz Vsync, 50MHz/3 or 64MHz/4?)
 	screen.set_raw(64_MHz_XTAL / 4, 644, 44, 44 + 512, 450, 31, 31 + 400);
 	screen.set_screen_update(FUNC(nwktr_state::screen_update));
@@ -680,10 +692,10 @@ void nwktr_state::nwktr(machine_config &config)
 	PALETTE(config, m_palette[0]).set_format(4, raw_to_rgb_converter::standard_rgb_decoder<5,5,5, 10,5,0>, 65536 / 4);
 	PALETTE(config, m_palette[1]).set_format(4, raw_to_rgb_converter::standard_rgb_decoder<5,5,5, 10,5,0>, 65536 / 4);
 
-	K001604(config, m_k001604[0], 0);
+	K001604(config, m_k001604[0]);
 	m_k001604[0]->set_palette(m_palette[0]);
 
-	K001604(config, m_k001604[1], 0);
+	K001604(config, m_k001604[1]);
 	m_k001604[1]->set_palette(m_palette[1]);
 
 	SPEAKER(config, "speaker", 2).front();
@@ -695,21 +707,19 @@ void nwktr_state::nwktr(machine_config &config)
 	rfsnd.add_route(0, "speaker", 1.0, 0);
 	rfsnd.add_route(1, "speaker", 1.0, 1);
 
-	KONPPC(config, m_konppc, 0);
+	KONPPC(config, m_konppc);
 	m_konppc->set_dsp_tag(0, m_dsp[0]);
 	m_konppc->set_dsp_tag(1, m_dsp[1]);
-	m_konppc->set_k033906_tag(0, "k033906_1");
-	m_konppc->set_k033906_tag(1, "k033906_2");
-	m_konppc->set_voodoo_tag(0, m_voodoo[0]);
-	m_konppc->set_voodoo_tag(1, m_voodoo[1]);
+	m_konppc->set_k033906_tag(0, m_k033906[0]);
+	m_konppc->set_k033906_tag(1, m_k033906[1]);
 	m_konppc->set_texture_bank_tag(0, m_cgboard_bank[0]);
 	m_konppc->set_texture_bank_tag(1, m_cgboard_bank[1]);
 	m_konppc->set_num_boards(2);
 	m_konppc->set_cgboard_type(konppc_device::CGBOARD_TYPE_NWKTR);
 
-	KONAMI_GN676A_LAN(config, m_gn676_lan, 0);
+	KONAMI_GN676A_LAN(config, m_gn676_lan);
 
-	KONPPC_JVS_HOST(config, m_jvs_host, 0);
+	KONPPC_JVS_HOST(config, m_jvs_host);
 	m_jvs_host->output_callback().set([this](uint8_t c) { m_maincpu->ppc4xx_spu_receive_byte(c); });
 }
 

@@ -57,7 +57,7 @@ public:
 	void dc_arm_aica_w(offs_t offset, uint32_t data, uint32_t mem_mask = ~0);
 	inline int decode_reg32_64(uint32_t offset, uint64_t mem_mask, uint64_t *shift);
 	inline int decode_reg3216_64(uint32_t offset, uint64_t mem_mask, uint64_t *shift);
-	int dc_compute_interrupt_level();
+	virtual int dc_compute_interrupt_level();
 	void dc_update_interrupt_status();
 	inline int decode_reg_64(uint32_t offset, uint64_t mem_mask, uint64_t *shift);
 	uint64_t dc_sysctrl_r(offs_t offset, uint64_t mem_mask = ~0);
@@ -74,6 +74,7 @@ public:
 	void aica_irq(int state);
 	void sh4_aica_irq(int state);
 	void external_irq(int state);
+	void maple_trigger(int state) { m_maple->maple_hw_trigger(); }
 
 
 	required_device<sh7091_device> m_maincpu;
@@ -93,6 +94,11 @@ public:
 	void dc_audio_map(address_map &map) ATTR_COLD;
 
 protected:
+	static void pvr_irq_status(uint32_t *regs, uint8_t data);
+	static void interrupt_status_w(uint32_t *regs, int reg, uint32_t old, uint32_t data);
+	static void update_summary_bits(uint32_t *regs);
+	static int interrupt_level(const uint32_t *regs);
+
 	void system_bus_config(machine_config &config, const char *cpu_tag);
 };
 

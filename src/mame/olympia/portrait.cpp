@@ -132,10 +132,9 @@ public:
 
 	static constexpr feature_type unemulated_features() { return feature::CAMERA; }
 
-	void portrait(machine_config &config);
+	void portrait(machine_config &config) ATTR_COLD;
 
 protected:
-	virtual void machine_start() override { m_lamps.resolve(); m_photo.resolve(); }
 	virtual void video_start() override ATTR_COLD;
 
 private:
@@ -385,8 +384,8 @@ uint32_t portrait_state::screen_update(screen_device &screen, bitmap_ind16 &bitm
 	cliprect_scroll = cliprect_no_scroll = cliprect;
 
 	// TODO: make clipping areas more readable
-	cliprect_no_scroll.min_x = cliprect_no_scroll.max_x - 111;
-	cliprect_scroll.max_x = cliprect_scroll.min_x + 319;
+	cliprect_no_scroll.setx(cliprect_no_scroll.right() - 111, cliprect_no_scroll.right());
+	cliprect_scroll.setx(cliprect_scroll.left(), cliprect_scroll.left() + 319);
 
 	// status bar
 	m_background->set_scrolly(0, 0);
@@ -569,13 +568,13 @@ void portrait_state::portrait(machine_config &config)
 	I8039(config, m_audiocpu, 3'120'000);  // ?
 	m_audiocpu->set_addrmap(AS_PROGRAM, &portrait_state::audio_program_map);
 
-	PIT8253(config, "pit0", 0); // TODO
+	PIT8253(config, "pit0"); // TODO
 
-	PIT8253(config, "pit1", 0); // TODO
+	PIT8253(config, "pit1"); // TODO
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_refresh_hz(50);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 	screen.set_size(64*8, 64*8);
@@ -634,6 +633,9 @@ ROM_START( portrait )
 	ROM_REGION( 0x40, "proms", 0 ) // colors
 	ROM_LOAD( "port_pr1.bin", 0x00, 0x0020, CRC(1e2deabb) SHA1(8357e53dba26bca9bc5d7a25c715836f0b3700b9) )
 	ROM_LOAD( "port_pr2.n4",  0x20, 0x0020, CRC(008634f3) SHA1(7cde6b09ede672d562569866d944428198f2ba9c) )
+
+	ROM_REGION( 0x20, "photo_acquisition_pcb_prom", 0 )
+	ROM_LOAD( "74s288.h4", 0x00, 0x20, CRC(b7e49a7e) SHA1(dc69b5ad37fd9bc421659e41afe5ce5e5f496425) )
 ROM_END
 
 ROM_START( portraita )
@@ -668,6 +670,9 @@ ROM_START( portraita )
 	ROM_REGION( 0x40, "proms", 0 ) // colors
 	ROM_LOAD( "port_pr1.bin", 0x00, 0x0020, CRC(1e2deabb) SHA1(8357e53dba26bca9bc5d7a25c715836f0b3700b9) )
 	ROM_LOAD( "port_pr2.n4",  0x20, 0x0020, CRC(008634f3) SHA1(7cde6b09ede672d562569866d944428198f2ba9c) )
+
+	ROM_REGION( 0x20, "photo_acquisition_pcb_prom", 0 )
+	ROM_LOAD( "74s288.h4", 0x00, 0x20, CRC(b7e49a7e) SHA1(dc69b5ad37fd9bc421659e41afe5ce5e5f496425) )
 ROM_END
 
 } // anonymous namespace

@@ -1,10 +1,61 @@
 // license:BSD-3-Clause
 // copyright-holders:Olivier Galibert
+/***************************************************************************
+
+    H8 Serial Communications Interface
+
+    TODO:
+    - It should not immediately tx_start() or rx_start() after writing to a
+      register, it's likely done at the next internal SCI clock.
+
+    Clocking:
+      Async mode:
+        The circuit wants 16 events per bit.
+          * Internal clocking: the cpu clock is divided by one of (1, 4, 16, 64)
+            from the cks field of smr then by (brr+1) then by 2.
+          * External clocking: the external clock is supposed to be 16*bitrate.
+      Sync mode:
+        The circuit wants 2 events per bit, a positive and a negative edge.
+          * Internal clocking: the cpu clock is divided by one of (1, 4, 16, 64)
+            from the cks field of smr then by (brr+1) then by 2.  Events are then
+            interpreted has been alternatively positive and negative (e.g. another
+            divide-by-two, sync-wise).
+          * External clocking: the external clock is supposed to be at bitrate,
+            both edges are used.
+
+    Synchronization:
+      Async mode:
+        Both modes use a 4-bits counter incremented on every event (16/bit).
+
+        * Transmit sets the counter to 0 at transmit start.  Output data line
+          changes value on counter == 0.  If the clock output is required, clk=1
+          outside of transmit, clk=0 on counter==0, clk=1 on counter==8.
+
+        * Receive sets the counter to 0 when the data line initially goes down
+          (start bit).  Output line is read on counter==8.  It is unknown whether
+          the counter is reset on every data line level change.
+
+      Sync mode:
+        * Transmit changes the data line on negative edges, the clock line,
+          following positive and negative edge definition, is output as long as
+          transmit is active and is otherwise 1.
+
+        * Receive reads the data line on positive edges.
+
+    Framing:
+      Async mode: 1 bit of start at 0, 7 or 8 bits of data, nothing or 1 bit of
+      parity or 1 bit of multiprocessing, 1 or 2 bits of stop at 1.
+      Sync mode: 8 bits of data.
+
+      Multiprocessing bit is an extra bit which value can be set on transmit
+      in bit zero of ssr.  On receive when zero the byte is dropped.
+
+***************************************************************************/
 
 #include "emu.h"
 #include "h8_sci.h"
 
-#include "h8.h"
+#include "h8_cpu_base.h"
 
 #define LOG_REGS  (1 << 1U)  // Register writes
 #define LOG_RREGS (1 << 2U)  // Register reads
@@ -19,46 +70,6 @@
 #include "logmacro.h"
 
 DEFINE_DEVICE_TYPE(H8_SCI, h8_sci_device, "h8_sci", "H8 Serial Communications Interface")
-
-
-// Clocking:
-//   Async mode:
-//     The circuit wants 16 events per bit.
-//       * Internal clocking: the cpu clock is divided by one of (1, 4, 16, 64) from the cks field of smr
-//         then by (brr+1) then by 2.
-//       * External clocking: the external clock is supposed to be 16*bitrate.
-//   Sync mode:
-//     The circuit wants 2 events per bit, a positive and a negative edge.
-//       * Internal clocking: the cpu clock is divided by one of (1, 4, 16, 64) from the cks field of smr
-//         then by (brr+1) then by 2.  Events are then interpreted has been alternatively positive and
-//         negative (e.g. another divide-by-two, sync-wise).
-//       * External clocking: the external clock is supposed to be at bitrate, both edges are used.
-//
-// Synchronization:
-//   Async mode:
-//     Both modes use a 4-bits counter incremented on every event (16/bit).
-//
-//     * Transmit sets the counter to 0 at transmit start.  Output data line changes value
-//       on counter == 0.  If the clock output is required, clk=1 outside of transmit,
-//       clk=0 on counter==0, clk=1 on counter==8.
-//
-//     * Receive sets the counter to 0 when the data line initially goes down (start bit)
-//       Output line is read on counter==8.  It is unknown whether the counter is reset
-//       on every data line level change.
-//
-//   Sync mode:
-//     * Transmit changes the data line on negative edges, the clock line, following positive and
-//       negative edge definition, is output as long as transmit is active and is otherwise 1.
-//
-//     * Receive reads the data line on positive edges.
-//
-// Framing:
-//   Async mode: 1 bit of start at 0, 7 or 8 bits of data, nothing or 1 bit of parity or 1 bit of multiprocessing, 1 or 2 bits of stop at 1.
-//   Sync mode: 8 bits of data.
-//
-//   Multiprocessing bit is an extra bit which value can be set on transmit in bit zero of ssr.
-//   On receive when zero the byte is dropped.
-
 
 const char *const h8_sci_device::state_names[] = { "idle", "start", "bit", "parity", "stop", "last-tick" };
 
@@ -160,6 +171,15 @@ void h8_sci_device::scr_w(u8 data)
 		m_intc->internal_interrupt(m_rxi_int);
 	if((delta & SCR_RIE) && (m_scr & SCR_RIE) && has_recv_error())
 		m_intc->internal_interrupt(m_eri_int);
+
+	if((delta & SCR_TIE) && !(m_scr & SCR_TIE))
+		m_intc->clear_interrupt(m_txi_int);
+	if((delta & SCR_TEIE) && !(m_scr & SCR_TEIE))
+		m_intc->clear_interrupt(m_tei_int);
+	if((delta & SCR_RIE) && !(m_scr & SCR_RIE)) {
+		m_intc->clear_interrupt(m_rxi_int);
+		m_intc->clear_interrupt(m_eri_int);
+	}
 }
 
 u8 h8_sci_device::scr_r()
@@ -175,6 +195,7 @@ void h8_sci_device::tdr_w(u8 data)
 	m_tdr = data;
 	if((m_cpu->access_is_dma()) && (m_scr & SCR_TE)) {
 		m_ssr &= ~(SSR_TDRE | SSR_TEND);
+		m_ssr_read &= m_ssr;
 		if(m_tx_state == ST_IDLE)
 			tx_start();
 	}
@@ -192,6 +213,7 @@ void h8_sci_device::ssr_w(u8 data)
 	if((m_scr & SCR_TE) && (m_ssr & m_ssr_read & SSR_TDRE) && !(data & SSR_TDRE))
 		m_ssr &= ~(SSR_TDRE | SSR_TEND);
 	m_ssr = (m_ssr & (~m_ssr_read | data | SSR_TDRE | SSR_TEND | SSR_MPB) & ~SSR_MPBT) | (data & SSR_MPBT);
+	m_ssr_read &= m_ssr;
 	LOGMASKED(LOG_REGS, "ssr_w %02x -> %02x (%06x)\n", data, m_ssr, m_cpu->pc());
 
 	if(m_tx_state == ST_IDLE && !(m_ssr & SSR_TDRE))
@@ -214,8 +236,10 @@ u8 h8_sci_device::rdr_r()
 	if(!machine().side_effects_disabled())
 		LOGMASKED(LOG_RREGS, "rdr_r %02x (%06x)\n", m_rdr, m_cpu->pc());
 
-	if(!machine().side_effects_disabled() && m_cpu->access_is_dma())
+	if(!machine().side_effects_disabled() && m_cpu->access_is_dma()) {
 		m_ssr &= ~SSR_RDRF;
+		m_ssr_read &= m_ssr;
+	}
 	return m_rdr;
 }
 
@@ -473,7 +497,7 @@ void h8_sci_device::clock_start(int mode)
 
 	case EXTERNAL_RATE_ASYNC:
 	case EXTERNAL_RATE_SYNC: {
-		LOGMASKED(LOG_CLOCK, "Simulating external clock\n", m_clock_mode == EXTERNAL_RATE_ASYNC ? "async" : "sync");
+		LOGMASKED(LOG_CLOCK, "Simulating external clock (%s)\n", m_clock_mode == EXTERNAL_RATE_ASYNC ? "async" : "sync");
 		u64 now = mode == CLK_TX ? m_cpu->total_cycles() : m_cpu->now_as_cycles();
 		m_clock_event = u64(u64(now * m_internal_to_external_ratio + 1) * m_external_to_internal_ratio + 1);
 		m_sync_timer->adjust(attotime::from_ticks(m_clock_event - now, m_cpu->system_clock()));
@@ -626,22 +650,30 @@ void h8_sci_device::tx_sync_step()
 {
 	LOGMASKED(LOG_STATE, "tx_sync_step bit=%d\n", m_tx_bit);
 	if(!m_tx_bit) {
-		m_tx_state = ST_IDLE;
-		clock_stop(CLK_TX);
-		m_cpu->do_sci_tx(m_id, 1);
-		if(m_scr & SCR_TEIE)
-			m_intc->internal_interrupt(m_tei_int);
-
-		// if there's more to send, start the transmitter
-		if((m_scr & SCR_TE) && !(m_ssr & SSR_TDRE))
-			tx_start();
-		else
+		// if there's more to send, load it and continue back-to-back on this same
+		// clock edge; otherwise stop (SCK stays high between transfers)
+		if((m_scr & SCR_TE) && !(m_ssr & SSR_TDRE)) {
+			m_ssr |= SSR_TDRE;
+			m_tsr = m_tdr;
+			m_tx_parity = m_smr & SMR_OE ? 0 : 1;
+			LOGMASKED(LOG_DATA, "start transmit %02x '%c'\n", m_tsr, m_tsr >= 32 && m_tsr < 127 ? m_tsr : '.');
+			if(m_scr & SCR_TIE)
+				m_intc->internal_interrupt(m_txi_int);
+			m_tx_bit = 8;
+		} else {
+			m_tx_state = ST_IDLE;
+			clock_stop(CLK_TX);
+			m_cpu->do_sci_tx(m_id, 1);
+			if(m_scr & SCR_TEIE)
+				m_intc->internal_interrupt(m_tei_int);
 			m_ssr |= SSR_TEND;
-	} else {
-		m_cpu->do_sci_tx(m_id, m_tsr & 1);
-		m_tsr >>= 1;
-		m_tx_bit--;
+			return;
+		}
 	}
+
+	m_cpu->do_sci_tx(m_id, m_tsr & 1);
+	m_tsr >>= 1;
+	m_tx_bit--;
 }
 
 void h8_sci_device::rx_start()

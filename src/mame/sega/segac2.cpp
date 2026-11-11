@@ -1144,6 +1144,63 @@ static INPUT_PORTS_START( wwpajero )
 	PORT_DIPSETTING(    0x03, DEF_STR( On ) )
 INPUT_PORTS_END
 
+static INPUT_PORTS_START( wwjumbo )
+	PORT_INCLUDE( systemc_generic )
+
+	PORT_MODIFY("P1")
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+	PORT_MODIFY("P2")
+	PORT_BIT( 0xff, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+	PORT_MODIFY("SERVICE")
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+	PORT_MODIFY("DSW")
+	PORT_DIPNAME( 0x03, 0x03, "Demo Sound Interval" ) PORT_DIPLOCATION("SW2:1,2")
+	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x01, "Every 4 Minutes" )
+	PORT_DIPSETTING(    0x02, "Every 2 Minutes" )
+	PORT_DIPSETTING(    0x03, DEF_STR( On ) )
+	PORT_DIPNAME( 0x04, 0x04, "Lighting Time" ) PORT_DIPLOCATION("SW2:3")
+	PORT_DIPSETTING(    0x04, "Playtime Only" )
+	PORT_DIPSETTING(    0x00, "Advertise & Playtime" )
+	PORT_DIPNAME( 0x08, 0x08, "Light" ) PORT_DIPLOCATION("SW2:4")
+	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
+	PORT_DIPSETTING(    0x08, DEF_STR( On ) )
+	PORT_DIPNAME( 0x10, 0x10, "Screen Display" ) PORT_DIPLOCATION("SW2:5")
+	PORT_DIPSETTING(    0x10, "Insert 100-400 Yen" )
+	PORT_DIPSETTING(    0x00, "Insert Money" )
+	//"SW2:6" unused
+	//"SW2:7" unused
+	//"SW2:7" unused
+
+	PORT_MODIFY("COINAGE")
+	PORT_DIPNAME(    0x0f, 0x0f, DEF_STR( Coinage ) ) PORT_DIPLOCATION("SW1:1,2,3,4")
+	PORT_DIPSETTING(       0x07, DEF_STR( 4C_1C ) )
+	PORT_DIPSETTING(       0x08, DEF_STR( 3C_1C ) )
+	PORT_DIPSETTING(       0x09, DEF_STR( 2C_1C ) )
+	PORT_DIPSETTING(       0x0f, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x0e, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x0d, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x0c, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x0b, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x0a, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x06, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x05, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x04, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x03, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x02, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x01, DEF_STR( 1C_1C ) )
+	PORT_DIPSETTING(       0x00, DEF_STR( 1C_1C ) )
+	PORT_DIPUNUSED_DIPLOC( 0x10, IP_ACTIVE_LOW, "SW1:5" )
+	PORT_DIPUNUSED_DIPLOC( 0x20, IP_ACTIVE_LOW, "SW1:6" )
+	PORT_DIPUNUSED_DIPLOC( 0x40, IP_ACTIVE_LOW, "SW1:7" )
+	PORT_DIPUNUSED_DIPLOC( 0x80, IP_ACTIVE_LOW, "SW1:8" )
+INPUT_PORTS_END
 
 static INPUT_PORTS_START( sonicfgt )
 	PORT_INCLUDE( systemc_generic )
@@ -1771,12 +1828,12 @@ uint32_t segac2_state::screen_update_segac2_new(screen_device &screen, bitmap_rg
 	}
 
 	/* Copy our screen buffer here */
-	for (int y = cliprect.min_y; y <= cliprect.max_y; y++)
+	for (int y = cliprect.top(); y <= cliprect.bottom(); y++)
 	{
 		uint32_t *const desty = &bitmap.pix(y, 0);
 		uint16_t const *const srcy = m_vdp->m_render_line_raw.get();
 
-		for (int x = cliprect.min_x; x <= cliprect.max_x; x++)
+		for (int x = cliprect.left(); x <= cliprect.right(); x++)
 		{
 			uint16_t src = srcy[x];
 			switch (src & 0x1c0)
@@ -1916,7 +1973,7 @@ void segac2_state::segac(machine_config &config)
 
 	TIMER(config, "scantimer").configure_scanline("gen_vdp", FUNC(sega315_5313_device::megadriv_scanline_timer_callback_alt_timing), "screen", 0, 1);
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_refresh_hz(double(XL2_CLOCK.value()) / 10.0 / 262.0 / 342.0); // same as SMS?
 //  m_screen->set_refresh_hz(double(XL2_CLOCK.value()) / 8.0 / 262.0 / 427.0); // or 427 Htotal?
 	m_screen->set_size(512, 262);
@@ -2207,6 +2264,18 @@ ROM_START( wwanpanmo ) /* Waku Waku Anpanman - 837-7204 PCB */
 
 	ROM_REGION( 0x040000, "upd", 0 )
 	ROM_LOAD( "epr-14121.ic4", 0x000000, 0x040000, CRC(69adf3a1) SHA1(63233e723ab9be8d5663651cb2e6e54b64a7bb8e) )
+ROM_END
+
+
+// This shows ジャンボジェッタ on title screen, but is called わくわくジャンボ on the cabinet and on promotional material.
+// Going with the latter as it seems the intended title as part of the Waku Waku series
+ROM_START( wwjumbo ) // Waku Waku Jumbo (Rev.A) (c)1990 Sega - 834-7691 (EMP5032 labeled 317-0140 at ic27)
+	ROM_REGION( 0x200000, "maincpu", ROMREGION_ERASEFF )
+	ROM_LOAD16_BYTE( "epr-13474a.ic32", 0x000000, 0x020000, CRC(a9373fe0) SHA1(1abb334bbd16ab62459b25834ca1510af6dd5291) ) // hand-written label
+	ROM_LOAD16_BYTE( "epr-13473a.ic31", 0x000001, 0x020000, CRC(860a29cb) SHA1(31b36d6dc8226663c4e18e1b15ca6a9691b400b6) ) // "
+
+	ROM_REGION( 0x040000, "upd", ROMREGION_ERASEFF )
+	ROM_LOAD( "epr-13472.ic4", 0x000000, 0x020000, CRC(e0c677fc) SHA1(42dc5798876b863c5c2175798f40067215527145) )
 ROM_END
 
 
@@ -3080,7 +3149,7 @@ GAME( 1990, column2j,   columns2, segac,      columns2, segac2_state,    init_co
 GAME( 1990, tfrceac,    0,        segac2,     tfrceac,  segac2_state,    init_tfrceac,  ROT0,   "Technosoft / Sega", "Thunder Force AC", 0 )
 GAME( 1990, tfrceacj,   tfrceac,  segac2,     tfrceac,  segac2_state,    init_tfrceac,  ROT0,   "Technosoft / Sega", "Thunder Force AC (Japan)", 0 )
 GAME( 1990, tfrceacb,   tfrceac,  segac2,     tfrceac,  segac2_state,    init_tfrceacb, ROT0,   "bootleg",           "Thunder Force AC (bootleg)", 0 )
-GAME( 1990, tfrceacjpb, tfrceac,  tfrceacjpb, tfrceac,  segac2_state,    init_tfrceac,  ROT0,   "Technosoft / Sega", "Thunder Force AC (Japan, prototype, bootleg)", 0 )
+GAME( 1990, tfrceacjpb, tfrceac,  tfrceacjpb, tfrceac,  segac2_state,    init_tfrceac,  ROT0,   "bootleg",           "Thunder Force AC (Japan, prototype, bootleg)", 0 )
 
 GAME( 1990, borench,    0,        segac2,     borench,  segac2_state,    init_borench,  ROT0,   "Sega", "Borench (set 1)", 0 )
 GAME( 1990, borencha,   borench,  segac2,     borench,  segac2_state,    init_borench,  ROT0,   "Sega", "Borench (set 2)", 0 )
@@ -3111,6 +3180,7 @@ GAME( 1994, tantrbl3,   tantr,    segac,      ichir,    segac2_state,    init_ta
 
 GAME( 1992, wwanpanm,   0,        segac2,     wwmarine, wwmarine_state,  init_noprot,   ROT0,   "Sega", "Waku Waku Anpanman (Rev A)", 0 )
 GAME( 1992, wwanpanmo,  wwanpanm, segac2,     wwmarine, wwmarine_state,  init_noprot,   ROT0,   "Sega", "Waku Waku Anpanman", 0 )
+GAME( 1990, wwjumbo,    0,        segac2,     wwjumbo,  segac2_state,    init_noprot,   ROT0,   "Sega", "Waku Waku Jumbo (Rev A)", 0 )
 GAME( 1992, wwmarine,   0,        segac2,     wwmarine, wwmarine_state,  init_noprot,   ROT0,   "Sega", "Waku Waku Marine", 0 )
 GAME( 1990, wwpajero,   0,        segac2,     wwpajero, segac2_state,    init_noprot,   ROT0,   "Sega", "Waku Waku Pajero", 0 ) // test mode shows a variety of inputs, but sequence after coin-up seems to be non-interactive?
 

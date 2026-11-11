@@ -3,7 +3,7 @@
 /******************************************************************************
 
   Good Luck II
-  Si Se 7 (4-colors 7's)
+  四色7 (Sì Sè 7)
 
   Yung Yu / CYE, 1992.
 
@@ -36,7 +36,7 @@
 
   SOUND: 1x AY-3-8910 (U38)
          1x UM3567 (clone of Yamaha YM2413) (U36) --> Good Luck II PCB.
-		 1x MK28 (Clone of OKI 6295) ---------------> Si Se 7 PCB. 
+         1x MK28 (Clone of OKI 6295) ---------------> Si Se 7 PCB.
          1x 2904D JRC (Dual Operational Amplifier) (U40)
 
 
@@ -175,7 +175,7 @@
   Good Luck II.
 
   There are pieces of code that initialize two PIA 6821s, that are not included
-  in the PCB. Seems a leftover. Also the program try to handle a suppossed lamps
+  in the PCB. Seems a leftover. Also the program tries to handle a supposed lamps
   system through these 'phantom' PIAs...
 
   The sound system is through a YM2413, and sound a lot nicer than the former
@@ -388,7 +388,7 @@ static INPUT_PORTS_START( gluck2 )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_GAMBLE_TAKE )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_GAMBLE_SERVICE ) PORT_NAME("Service")
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SERVICE1 ) PORT_NAME("Service")
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
@@ -399,7 +399,7 @@ static INPUT_PORTS_START( gluck2 )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_POKER_HOLD4 )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_POKER_HOLD5 )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_CODE(KEYCODE_R) PORT_NAME("Reset")
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_MEMORY_RESET )  PORT_NAME("Reset")
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("SW1")   // 2000
@@ -495,7 +495,7 @@ static INPUT_PORTS_START( sise7 )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_GAMBLE_TAKE )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_GAMBLE_LOW )     PORT_NAME("Small")
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_GAMBLE_HIGH )    PORT_NAME("Big")
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_GAMBLE_SERVICE ) PORT_NAME("Service")
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SERVICE1 )       PORT_NAME("Service")
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )     PORT_CODE(KEYCODE_3_PAD) PORT_NAME("PAD 3")
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )     PORT_CODE(KEYCODE_4_PAD) PORT_NAME("PAD 4")
 
@@ -634,7 +634,7 @@ void gluck2_state::gluck2(machine_config &config)
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_refresh_hz(60);
 	screen.set_vblank_time(ATTOSECONDS_IN_USEC(0));
 
@@ -735,4 +735,4 @@ ROM_END
 
 //    YEAR  NAME     PARENT  MACHINE   INPUT   STATE         INIT        ROT    COMPANY          FULLNAME                 FLAGS...
 GAME( 1992, gluck2,  0,      gluck2,   gluck2, gluck2_state, empty_init, ROT0, "Yung Yu / CYE", "Good Luck II",           MACHINE_SUPPORTS_SAVE )
-GAME( 1992, sise7,   0,      sise7,    sise7,  gluck2_state, empty_init, ROT0, "Yung Yu / CYE", "Si Se 7 (4-colors 7's)", MACHINE_SUPPORTS_SAVE )
+GAME( 1992, sise7,   0,      sise7,    sise7,  gluck2_state, empty_init, ROT0, "Yung Yu / CYE", "Si Se 7",                MACHINE_SUPPORTS_SAVE )

@@ -1518,7 +1518,7 @@ void harddriv_state::driver_nomsp(machine_config &config)
 
 	config.set_maximum_quantum(attotime::from_hz(30000));
 
-	M48T02(config, m_200e, 0);
+	M48T02(config, m_200e);
 
 	EEPROM_2816(config, m_210e); // MK48Z02
 
@@ -1532,7 +1532,7 @@ void harddriv_state::driver_nomsp(machine_config &config)
 	/* video hardware */
 	PALETTE(config, m_palette).set_entries(1024);
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(HARDDRIV_GSP_CLOCK/620*138, 160*4, 0, 127*4, 417, 0, 384);
 	m_screen->set_screen_update("gsp", FUNC(tms34010_device::tms340x0_ind16));
 	m_screen->set_video_attributes(VIDEO_UPDATE_BEFORE_VBLANK);
@@ -1678,7 +1678,7 @@ void harddriv_state::dsk(machine_config &config)
 	EEPROM_2816(config, m_dsk_30c); // MK48Z02
 
 	/* ASIC65 */
-	ASIC65(config, m_asic65, 0, ASIC65_STANDARD);
+	ASIC65(config, m_asic65, 20'000'000, ASIC65_STANDARD);
 }
 
 
@@ -1691,7 +1691,7 @@ void harddriv_state::dsk2(machine_config &config)
 	m_dsp32->set_addrmap(AS_PROGRAM, &harddriv_state::dsk2_dsp32_map);
 
 	/* ASIC65 */
-	ASIC65(config, m_asic65, 0, ASIC65_STANDARD);
+	ASIC65(config, m_asic65, 20'000'000, ASIC65_STANDARD);
 }
 
 
@@ -1714,7 +1714,7 @@ void harddriv_board_device_state::device_add_mconfig(machine_config &config)
 	driver_msp(config);
 	/* basic machine hardware */        /* original driver board with MSP */
 	adsp(config);                       /* ADSP board */
-	HARDDRIV_SOUND_BOARD(config, m_harddriv_sound, 0); /* driver sound board */
+	HARDDRIV_SOUND_BOARD(config, m_harddriv_sound); /* driver sound board */
 }
 
 void harddriv_board_device_state::device_start()
@@ -1746,7 +1746,7 @@ void harddrivc_board_device_state::device_add_mconfig(machine_config &config)
 
 	/* basic machine hardware */        /* multisync board with MSP */
 	adsp(config);                       /* ADSP board */
-	HARDDRIV_SOUND_BOARD(config, m_harddriv_sound, 0); /* driver sound board */
+	HARDDRIV_SOUND_BOARD(config, m_harddriv_sound); /* driver sound board */
 }
 
 
@@ -1789,7 +1789,7 @@ void racedriv_board_device_state::device_add_mconfig(machine_config &config)
 	/* basic machine hardware */        /* original driver board without MSP */
 	adsp(config);                       /* ADSP board */
 	dsk(config);                        /* DSK board */
-	HARDDRIV_SOUND_BOARD(config, m_harddriv_sound, 0); /* driver sound board */
+	HARDDRIV_SOUND_BOARD(config, m_harddriv_sound); /* driver sound board */
 }
 
 /* Race Drivin Compact */
@@ -1845,7 +1845,7 @@ void racedrivc_board_device_state::device_add_mconfig(machine_config &config)
 	/* basic machine hardware */        /* multisync board without MSP */
 	adsp(config);                       /* ADSP board */
 	dsk(config);                        /* DSK board */
-	HARDDRIV_SOUND_BOARD(config, m_harddriv_sound, 0); /* driver sound board */
+	HARDDRIV_SOUND_BOARD(config, m_harddriv_sound); /* driver sound board */
 }
 
 void racedrivc_panorama_side_board_device_state::device_add_mconfig(machine_config &config)
@@ -1865,7 +1865,7 @@ void racedrivc_panorama_side_board_device_state::device_add_mconfig(machine_conf
 	/* basic machine hardware */        /* multisync board without MSP */
 	adsp(config);                       /* ADSP board */
 //  dsk(config);                        /* DSK board */
-//  HARDDRIV_SOUND_BOARD(config, "sound_board", 0); /* driver sound board */
+//  HARDDRIV_SOUND_BOARD(config, "sound_board"); /* driver sound board */
 }
 
 /* Stun Runner */
@@ -1898,7 +1898,7 @@ void stunrun_board_device_state::device_add_mconfig(machine_config &config)
 	/* sund hardware */
 	SPEAKER(config, "mono").front_center();
 
-	ATARI_JSA_II(config, m_jsa, 0);
+	ATARI_JSA_II(config, m_jsa);
 	m_jsa->main_int_cb().set(FUNC(harddriv_state::sound_int_write_line));
 	m_jsa->test_read_cb().set_ioport("IN0").bit(5);
 	m_jsa->add_route(ALL_OUTPUTS, "mono", 0.5);
@@ -1960,14 +1960,15 @@ void steeltal_board_device_state::device_add_mconfig(machine_config &config) //t
 	config.device_remove("rdac");
 	config.device_remove("speaker");
 
-	ASIC65(config, m_asic65, 0, ASIC65_STEELTAL);         /* ASIC65 on DSPCOM board */
+	ASIC65(config, m_asic65, 20'000'000, ASIC65_STEELTAL);         /* ASIC65 on DSPCOM board */
 
 	/* sund hardware */
 	SPEAKER(config, "mono").front_center();
 
-	ATARI_JSA_III(config, m_jsa, 0);
+	ATARI_JSA_III(config, m_jsa);
 	m_jsa->main_int_cb().set(FUNC(harddriv_state::sound_int_write_line));
 	m_jsa->test_read_cb().set_ioport("IN0").bit(5);
+	downcast<atari_jsa_iii_device &>(*m_jsa).set_oki_bankregion("jsa:oki");
 	m_jsa->add_route(ALL_OUTPUTS, "mono", 1.0);
 }
 
@@ -2041,67 +2042,67 @@ void hdrivair_board_device_state::device_add_mconfig(machine_config &config)
 
 void harddriv_new_state::harddriv_machine(machine_config &config)
 {
-	HARDDRIV_BOARD(config, "mainpcb", 0);
+	HARDDRIV_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::harddrivc_machine(machine_config &config)
 {
-	HARDDRIVC_BOARD(config, "mainpcb", 0);
+	HARDDRIVC_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::racedriv_machine(machine_config &config)
 {
-	RACEDRIV_BOARD(config, "mainpcb", 0);
+	RACEDRIV_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::racedrivb1_machine(machine_config &config)
 {
-	RACEDRIVB1_BOARD(config, "mainpcb", 0);
+	RACEDRIVB1_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::racedrivc_machine(machine_config &config)
 {
-	RACEDRIVC_BOARD(config, "mainpcb", 0);
+	RACEDRIVC_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::racedrivc1_machine(machine_config &config)
 {
-	RACEDRIVC1_BOARD(config, "mainpcb", 0);
+	RACEDRIVC1_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::stunrun_machine(machine_config &config)
 {
-	STUNRUN_BOARD(config, "mainpcb", 0);
+	STUNRUN_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::strtdriv_machine(machine_config &config)
 {
-	STRTDRIV_BOARD(config, "mainpcb", 0);
+	STRTDRIV_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::hdrivair_machine(machine_config &config)
 {
-	HDRIVAIR_BOARD(config, "mainpcb", 0);
+	HDRIVAIR_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::hdrivair0_machine(machine_config &config)
 {
-	HDRIVAIR0_BOARD(config, "mainpcb", 0);
+	HDRIVAIR0_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::steeltal_machine(machine_config &config)
 {
-	STEELTAL_BOARD(config, "mainpcb", 0);
+	STEELTAL_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::steeltal1_machine(machine_config &config)
 {
-	STEELTAL1_BOARD(config, "mainpcb", 0);
+	STEELTAL1_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::steeltalp_machine(machine_config &config)
 {
-	STEELTALP_BOARD(config, "mainpcb", 0);
+	STEELTALP_BOARD(config, "mainpcb");
 }
 
 void harddriv_new_state::tx_a(int state)
@@ -2113,9 +2114,9 @@ void harddriv_new_state::tx_a(int state)
 
 void harddriv_new_state::racedriv_panorama_machine(machine_config &config)
 {
-	RACEDRIV_BOARD(config, "mainpcb", 0);
-	RACEDRIVC_PANORAMA_SIDE_BOARD(config, "leftpcb", 0);
-	RACEDRIVC_PANORAMA_SIDE_BOARD(config, "rightpcb", 0);
+	RACEDRIV_BOARD(config, "mainpcb");
+	RACEDRIVC_PANORAMA_SIDE_BOARD(config, "leftpcb");
+	RACEDRIVC_PANORAMA_SIDE_BOARD(config, "rightpcb");
 
 //  config.set_maximum_quantum(attotime::from_hz(100000));
 	subdevice<mc68681_device>("mainpcb:duartn68681")->a_tx_cb().set(FUNC(harddriv_new_state::tx_a));
@@ -4458,7 +4459,7 @@ ROM_START( steeltal )
 	ROM_LOAD16_BYTE( "136087-1018.2t",  0x000000, 0x020000, CRC(a5882384) SHA1(157707b5b114fa584893dec07dc456d4a5520f44) )
 	ROM_LOAD16_BYTE( "136087-1017.2lm", 0x000001, 0x020000, CRC(0a29db30) SHA1(f11ad7fe27989ffd66e9bef2c14ec040a4125d8a) )
 
-	ROM_REGION( 0x80000, "mainpcb:jsa:oki1", 0 )
+	ROM_REGION( 0x80000, "mainpcb:jsa:oki", 0 )
 	ROM_LOAD( "136087-5002.1m",  0x000000, 0x020000, CRC(c904db9c) SHA1(d25fff3da87d2b716cd65fb7dd157c3f1f5e5909) )
 	ROM_LOAD( "136087-5003.1n",  0x020000, 0x020000, CRC(164580b3) SHA1(03118c8323d8a49a65addc61c1402d152d42d7f9) )
 	ROM_LOAD( "136087-5004.1p",  0x040000, 0x020000, CRC(296290a0) SHA1(8a3441a5618233f561531fe456e1f5ed22183421) )
@@ -4521,7 +4522,7 @@ ROM_START( steeltalg )
 	ROM_LOAD16_BYTE( "136087-1018.2t",  0x000000, 0x020000, CRC(a5882384) SHA1(157707b5b114fa584893dec07dc456d4a5520f44) )
 	ROM_LOAD16_BYTE( "136087-1017.2lm", 0x000001, 0x020000, CRC(0a29db30) SHA1(f11ad7fe27989ffd66e9bef2c14ec040a4125d8a) )
 
-	ROM_REGION( 0x80000, "mainpcb:jsa:oki1", 0 )
+	ROM_REGION( 0x80000, "mainpcb:jsa:oki", 0 )
 	ROM_LOAD( "136087-5002.1m",  0x000000, 0x020000, CRC(c904db9c) SHA1(d25fff3da87d2b716cd65fb7dd157c3f1f5e5909) )
 	ROM_LOAD( "136087-5003.1n",  0x020000, 0x020000, CRC(164580b3) SHA1(03118c8323d8a49a65addc61c1402d152d42d7f9) )
 	ROM_LOAD( "136087-5004.1p",  0x040000, 0x020000, CRC(296290a0) SHA1(8a3441a5618233f561531fe456e1f5ed22183421) )
@@ -4584,7 +4585,7 @@ ROM_START( steeltal1 )
 	ROM_LOAD16_BYTE( "136087-1018.2t",  0x000000, 0x020000, CRC(a5882384) SHA1(157707b5b114fa584893dec07dc456d4a5520f44) )
 	ROM_LOAD16_BYTE( "136087-1017.2lm", 0x000001, 0x020000, CRC(0a29db30) SHA1(f11ad7fe27989ffd66e9bef2c14ec040a4125d8a) )
 
-	ROM_REGION( 0x80000, "mainpcb:jsa:oki1", 0 )
+	ROM_REGION( 0x80000, "mainpcb:jsa:oki", 0 )
 	ROM_LOAD( "136087-5002.1m",  0x000000, 0x020000, CRC(c904db9c) SHA1(d25fff3da87d2b716cd65fb7dd157c3f1f5e5909) )
 	ROM_LOAD( "136087-5003.1n",  0x020000, 0x020000, CRC(164580b3) SHA1(03118c8323d8a49a65addc61c1402d152d42d7f9) )
 	ROM_LOAD( "136087-5004.1p",  0x040000, 0x020000, CRC(296290a0) SHA1(8a3441a5618233f561531fe456e1f5ed22183421) )
@@ -4647,7 +4648,7 @@ ROM_START( steeltalp )
 	ROM_LOAD16_BYTE( "rom.2t",  0x00000, 0x20000, CRC(05284504) SHA1(03b81c077f8ff073713f4bcc10b82087743b0d84) )
 	ROM_LOAD16_BYTE( "rom.2lm", 0x00001, 0x20000, CRC(d6e65b87) SHA1(ac4b2f292f6e28a15e3a12f09f6c2f9523e8b178) )
 
-	ROM_REGION( 0x80000, "mainpcb:jsa:oki1", 0 )
+	ROM_REGION( 0x80000, "mainpcb:jsa:oki", 0 )
 	ROM_LOAD( "136087-5002.1m",  0x000000, 0x020000, CRC(c904db9c) SHA1(d25fff3da87d2b716cd65fb7dd157c3f1f5e5909) )
 	ROM_LOAD( "136087-5003.1n",  0x020000, 0x020000, CRC(164580b3) SHA1(03118c8323d8a49a65addc61c1402d152d42d7f9) )
 	ROM_LOAD( "136087-5004.1p",  0x040000, 0x020000, CRC(296290a0) SHA1(8a3441a5618233f561531fe456e1f5ed22183421) )
@@ -4946,7 +4947,7 @@ void harddriv_state::init_ds3()
 	/* predetermine memory regions, can't use a region_ptr because strtdriv expects uint8_t while hdrivair expects uint16_t, also need to check if region exists for steeltal*/
 	if (memregion("ds3sdsp_data") != nullptr)
 	{
-		m_ds3_sdata_memory = (uint16_t *)memregion("ds3sdsp_data")->base();
+		m_ds3_sdata_memory = &memregion("ds3sdsp_data")->as_u16();
 		m_ds3_sdata_memory_size = memregion("ds3sdsp_data")->bytes() / 2;
 	}
 /*
@@ -5021,7 +5022,7 @@ void harddriv_state::init_ds3()
 /* COMMON INIT: initialize the DSK add-on board */
 void harddriv_state::init_dsk()
 {
-	uint8_t *usr3 = memregion("user3")->base();
+	uint16_t *usr3 = &memregion("user3")->as_u16();
 
 	/* install ASIC61 */
 	m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0x85c000, 0x85c7ff, read16sm_delegate(*this, FUNC(harddriv_state::hd68k_dsk_dsp32_r)), write16sm_delegate(*this, FUNC(harddriv_state::hd68k_dsk_dsp32_w)));
@@ -5032,7 +5033,7 @@ void harddriv_state::init_dsk()
 	/* install extra RAM */
 	m_maincpu->space(AS_PROGRAM).install_read_handler(0x900000, 0x90ffff, read16sm_delegate(*this, FUNC(harddriv_state::hd68k_dsk_ram_r)));
 	m_maincpu->space(AS_PROGRAM).install_write_handler(0x900000, 0x90ffff, write16s_delegate(*this, FUNC(harddriv_state::hd68k_dsk_ram_w)));
-	m_dsk_ram = (uint16_t *)(usr3 + 0x40000);
+	m_dsk_ram = usr3 + 0x40000/2;
 
 	/* install extra ZRAM */
 	m_maincpu->space(AS_PROGRAM).install_read_handler(0x910000, 0x910fff, read8m_delegate(*m_dsk_10c, FUNC(eeprom_parallel_28xx_device::read)), 0xff00);
@@ -5047,14 +5048,14 @@ void harddriv_state::init_dsk()
 
 	/* install extra ROM */
 	m_maincpu->space(AS_PROGRAM).install_read_handler(0x940000, 0x9fffff, read16sm_delegate(*this, FUNC(harddriv_state::hd68k_dsk_small_rom_r)));
-	m_dsk_rom = (uint16_t *)(usr3 + 0x00000);
+	m_dsk_rom = usr3 + 0x00000/2;
 }
 
 
 /* COMMON INIT: initialize the DSK II add-on board */
 void harddriv_state::init_dsk2()
 {
-	uint8_t *usr3 = memregion("user3")->base();
+	uint16_t *usr3 = &memregion("user3")->as_u16();
 
 	/* install ASIC65 */
 	m_maincpu->space(AS_PROGRAM).install_write_handler(0x824000, 0x824003, write16sm_delegate(*m_asic65, FUNC(asic65_device::data_w)));
@@ -5070,11 +5071,11 @@ void harddriv_state::init_dsk2()
 	/* install extra RAM */
 	m_maincpu->space(AS_PROGRAM).install_read_handler(0x880000, 0x8bffff, read16sm_delegate(*this, FUNC(harddriv_state::hd68k_dsk_ram_r)));
 	m_maincpu->space(AS_PROGRAM).install_write_handler(0x880000, 0x8bffff, write16s_delegate(*this, FUNC(harddriv_state::hd68k_dsk_ram_w)));
-	m_dsk_ram = (uint16_t *)(usr3 + 0x100000);
+	m_dsk_ram = usr3 + 0x100000/2;
 
 	/* install extra ROM */
 	m_maincpu->space(AS_PROGRAM).install_read_handler(0x900000, 0x9fffff, read16sm_delegate(*this, FUNC(harddriv_state::hd68k_dsk_rom_r)));
-	m_dsk_rom = (uint16_t *)(usr3 + 0x000000);
+	m_dsk_rom = usr3 + 0x000000/2;
 }
 
 
@@ -5305,8 +5306,8 @@ void harddriv_state::steeltal_init_common(offs_t ds3_transfer_pc, int proto_sloo
 	else
 		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(0xe0000, 0xfffff, read16sm_delegate(*this, FUNC(harddriv_state::st68k_protosloop_r)), write16sm_delegate(*this, FUNC(harddriv_state::st68k_protosloop_w)));
 
-	m_m68k_sloop_base = (uint16_t *)(memregion("maincpu")->base() + 0xe0000);
-	m_m68k_sloop_alt_base = (uint16_t *)(memregion("maincpu")->base() + 0x4e000);
+	m_m68k_sloop_base = &memregion("maincpu")->as_u16() + 0xe0000/2;
+	m_m68k_sloop_alt_base = &memregion("maincpu")->as_u16() + 0x4e000/2;
 
 	/* set up protection hacks */
 	m_gsp->space(AS_PROGRAM).install_write_handler(0xfff965d0, 0xfff965df, write16smo_delegate(*this, FUNC(harddriv_state::hdgsp_protection_w)));

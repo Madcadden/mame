@@ -214,6 +214,7 @@ public:
 
 	// configuration
 	void configure(u32 *base, u32 size);
+	void set_base(u32 *base) { m_base = base; }
 
 	// state saving
 	void register_save(save_proxy &save);
@@ -524,6 +525,11 @@ protected:
 	void prepare_for_read();
 	bool prepare_for_write();
 	void recompute_fbmem_fifo();
+
+	// the memory FIFO free count reads 0xffff when empty, whatever the FIFO's size,
+	// and the high water mark compares against it; Glide subtracts the unusable part itself
+	u32 memory_fifo_free() const { return std::max(0xffff - m_fbmem_fifo.items() / 2, 0); }
+
 	void add_to_fifo(u32 offset, u32 data, u32 mem_mask);
 	void flush_fifos(attotime current_time);
 	virtual u32 execute_fifos();
@@ -724,7 +730,7 @@ inline u32 voodoo::register_table_entry::write(voodoo_1_device &device, u32 chip
 		if (regnum < voodoo_regs::reg_fvertexAx || regnum > voodoo_regs::reg_fdWdY)
 			device.logerror("VOODOO.REG:%s(%d) write = %08X\n", m_name, chipmask, data);
 		else
-			device.logerror("VOODOO.REG:%s(%d) write = %f\n", m_name, chipmask, double(u2f(data)));
+			device.logerror("VOODOO.REG:%s(%d) write = %f\n", m_name, chipmask, std::bit_cast<float>(data));
 	}
 	return m_write(chipmask & m_chipmask_flags, regnum, data & m_mask);
 }

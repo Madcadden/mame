@@ -41,12 +41,12 @@ protected:
 	virtual uint16_t inh_start() override { return 0xd000; }
 	virtual uint16_t inh_end() override { return 0xffff; }
 	virtual int inh_type() override;
+	virtual void reset_from_bus() override;
 
 private:
 	void do_io(int offset);
 
 	int m_inh_state;
-	int m_last_offset;
 	int m_dxxx_bank;
 	int m_main_bank;
 	uint8_t m_ram[128*1024];

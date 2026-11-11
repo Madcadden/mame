@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Wilbert Pol
+// copyright-holders:Wilbert Pol, Felipe Sanches
 /*******************************************************************
 
 Toshiba TMP95C063 emulation
@@ -8,6 +8,7 @@ Toshiba TMP95C063 emulation
 
 #include "emu.h"
 #include "tmp95c063.h"
+#include "dasm900.h"
 
 DEFINE_DEVICE_TYPE(TMP95C063, tmp95c063_device, "tmp95c063", "Toshiba TMP95C063")
 
@@ -248,39 +249,39 @@ void tmp95c063_device::tlcs900_handle_timers()
 	uint32_t  old_pre = m_timer_pre;
 
 	/* Is the pre-scaler active */
-	if ( m_t8run & 0x80 )
+	if (BIT(m_t8run, 7))
 		m_timer_pre += m_cycles;
 
 	/* Timer 0 */
-	if ( m_t8run & 0x01 )
+	if (BIT(m_t8run, 0))
 	{
-		switch( m_t8_mode[0] & 0x03 )
+		switch (m_t8_mode[0] & 0x03)
 		{
 		case 0x00:  /* TIO */
 			break;
 		case 0x01:  /* T1 */
-			m_timer_change[0] += ( m_timer_pre >> 7 ) - ( old_pre >> 7 );
+			m_timer_change[0] += (m_timer_pre >> 7) - (old_pre >> 7);
 			break;
 		case 0x02:  /* T4 */
-			m_timer_change[0] += ( m_timer_pre >> 9 ) - ( old_pre >> 9 );
+			m_timer_change[0] += (m_timer_pre >> 9) - (old_pre >> 9);
 			break;
 		case 0x03:  /* T16 */
-			m_timer_change[0] += ( m_timer_pre >> 11 ) - ( old_pre >> 11 );
+			m_timer_change[0] += (m_timer_pre >> 11) - (old_pre >> 11);
 			break;
 		}
 
-		for( ; m_timer_change[0] > 0; m_timer_change[0]-- )
+		for (; m_timer_change[0] > 0; m_timer_change[0]--)
 		{
 			m_timer_8[0] += 1;
-			if ( m_timer_8[0] == m_t8_reg[0] )
+			if (m_timer_8[0] == m_t8_reg[0])
 			{
-				if ( ( m_t8run & 0x02 ) && ( m_t8_mode[0] & 0x0c ) == 0x00 )
+				if (BIT(m_t8run, 1) && (m_t8_mode[0] & 0x0c) == 0x00)
 				{
 					m_timer_change[1] += 1;
 				}
 
 				/* In 16bit timer mode the timer should not be reset */
-				if ( ( m_t8_mode[0] & 0xc0 ) != 0x40 )
+				if ((m_t8_mode[0] & 0xc0) != 0x40)
 				{
 					m_timer_8[0] = 0;
 					m_int_reg[INTET01] |= 0x08;
@@ -290,38 +291,38 @@ void tmp95c063_device::tlcs900_handle_timers()
 	}
 
 	/* Timer 1 */
-	if ( m_t8run & 0x02 )
+	if (BIT(m_t8run, 1))
 	{
-		switch( ( m_t8_mode[0] >> 2 ) & 0x03 )
+		switch ((m_t8_mode[0] >> 2) & 0x03)
 		{
 		case 0x00:  /* TO0TRG */
 			break;
 		case 0x01:  /* T1 */
-			m_timer_change[1] += ( m_timer_pre >> 7 ) - ( old_pre >> 7 );
+			m_timer_change[1] += (m_timer_pre >> 7) - (old_pre >> 7);
 			break;
 		case 0x02:  /* T16 */
-			m_timer_change[1] += ( m_timer_pre >> 11 ) - ( old_pre >> 11 );
+			m_timer_change[1] += (m_timer_pre >> 11) - (old_pre >> 11);
 			break;
 		case 0x03:  /* T256 */
-			m_timer_change[1] += ( m_timer_pre >> 15 ) - ( old_pre >> 15 );
+			m_timer_change[1] += (m_timer_pre >> 15) - (old_pre >> 15);
 			break;
 		}
 
-		for( ; m_timer_change[1] > 0; m_timer_change[1]-- )
+		for (; m_timer_change[1] > 0; m_timer_change[1]--)
 		{
 			m_timer_8[1] += 1;
-			if ( m_timer_8[1] == m_t8_reg[1] )
+			if (m_timer_8[1] == m_t8_reg[1])
 			{
 				m_timer_8[1] = 0;
 				m_int_reg[INTET01] |= 0x80;
 
-				if ( m_t8_invert[0] & 0x02 )
+				if (BIT(m_t8_invert[0], 1))
 				{
-					//tlcs900_change_tff( 1, FF_INVERT );
+					//tlcs900_change_tff(1, FF_INVERT);
 				}
 
 				/* In 16bit timer mode also reset timer 0 */
-				if ( ( m_t8_mode[0] & 0xc0 ) == 0x40 )
+				if ((m_t8_mode[0] & 0xc0) == 0x40)
 				{
 					m_timer_8[0] = 0;
 				}
@@ -330,34 +331,34 @@ void tmp95c063_device::tlcs900_handle_timers()
 	}
 
 	/* Timer 2 */
-	if ( m_t8run & 0x04 )
+	if (BIT(m_t8run, 2))
 	{
-		switch( m_t8_mode[1] & 0x03 )
+		switch (m_t8_mode[1] & 0x03)
 		{
 		case 0x00:  /* invalid */
 		case 0x01:  /* T1 */
-			m_timer_change[2] += ( m_timer_pre >> 7 ) - ( old_pre >> 7 );
+			m_timer_change[2] += (m_timer_pre >> 7) - (old_pre >> 7);
 			break;
 		case 0x02:  /* T4 */
-			m_timer_change[2] += ( m_timer_pre >> 9 ) - ( old_pre >> 9 );
+			m_timer_change[2] += (m_timer_pre >> 9) - (old_pre >> 9);
 			break;
 		case 0x03:  /* T16 */
-			m_timer_change[2] += ( m_timer_pre >> 11 ) - ( old_pre >> 11 );
+			m_timer_change[2] += (m_timer_pre >> 11) - (old_pre >> 11);
 			break;
 		}
 
-		for( ; m_timer_change[2] > 0; m_timer_change[2]-- )
+		for (; m_timer_change[2] > 0; m_timer_change[2]--)
 		{
 			m_timer_8[2] += 1;
-			if ( m_timer_8[2] == m_t8_reg[2] )
+			if (m_timer_8[2] == m_t8_reg[2])
 			{
-				if ( ( m_t8run & 0x08 ) && ( m_t8_mode[1] & 0x0c ) == 0x00 )
+				if (BIT(m_t8run, 3) && (m_t8_mode[1] & 0x0c) == 0x00)
 				{
 					m_timer_change[3] += 1;
 				}
 
 				/* In 16bit timer mode the timer should not be reset */
-				if ( ( m_t8_mode[1] & 0xc0 ) != 0x40 )
+				if ((m_t8_mode[1] & 0xc0) != 0x40)
 				{
 					m_timer_8[2] = 0;
 					m_int_reg[INTET23] |= 0x08;
@@ -367,38 +368,38 @@ void tmp95c063_device::tlcs900_handle_timers()
 	}
 
 	/* Timer 3 */
-	if ( m_t8run & 0x08 )
+	if (BIT(m_t8run, 3))
 	{
-		switch( ( m_t8_mode[1] >> 2 ) & 0x03 )
+		switch ((m_t8_mode[1] >> 2) & 0x03)
 		{
 		case 0x00:  /* TO2TRG */
 			break;
 		case 0x01:  /* T1 */
-			m_timer_change[3] += ( m_timer_pre >> 7 ) - ( old_pre >> 7 );
+			m_timer_change[3] += (m_timer_pre >> 7) - (old_pre >> 7);
 			break;
 		case 0x02:  /* T16 */
-			m_timer_change[3] += ( m_timer_pre >> 11 ) - ( old_pre >> 11 );
+			m_timer_change[3] += (m_timer_pre >> 11) - (old_pre >> 11);
 			break;
 		case 0x03:  /* T256 */
-			m_timer_change[3] += ( m_timer_pre >> 15 ) - ( old_pre >> 15 );
+			m_timer_change[3] += (m_timer_pre >> 15) - (old_pre >> 15);
 			break;
 		}
 
-		for( ; m_timer_change[3] > 0; m_timer_change[3]-- )
+		for (; m_timer_change[3] > 0; m_timer_change[3]--)
 		{
 			m_timer_8[3] += 1;
-			if ( m_timer_8[3] == m_t8_reg[3] )
+			if (m_timer_8[3] == m_t8_reg[3])
 			{
 				m_timer_8[3] = 0;
 				m_int_reg[INTET23] |= 0x80;
 
-				if ( m_t8_invert[1] & 0x20 )
+				if (BIT(m_t8_invert[1], 5))
 				{
-					//tlcs900_change_tff( 3, FF_INVERT );
+					//tlcs900_change_tff(3, FF_INVERT);
 				}
 
 				/* In 16bit timer mode also reset timer 2 */
-				if ( ( m_t8_mode[1] & 0xc0 ) == 0x40 )
+				if ((m_t8_mode[1] & 0xc0) == 0x40)
 				{
 					m_timer_8[2] = 0;
 				}
@@ -406,7 +407,7 @@ void tmp95c063_device::tlcs900_handle_timers()
 		}
 	}
 
-	m_timer_pre &= 0xffffff;
+	m_timer_pre &= 0xff'ffff;
 }
 
 void tmp95c063_device::tlcs900_check_hdma()
@@ -417,13 +418,15 @@ void tmp95c063_device::tlcs900_check_hdma()
 void tmp95c063_device::tlcs900_check_irqs()
 {
 	/* Check for NMI */
-	if ( m_nmi_state == ASSERT_LINE )
+	if (m_nmi_state == ASSERT_LINE)
 	{
+		tlcs900_intnest_accept();
+
 		m_xssp.d -= 4;
-		WRMEML( m_xssp.d, m_pc.d );
+		WRMEML(m_xssp.d, m_pc.d);
 		m_xssp.d -= 2;
-		WRMEMW( m_xssp.d, m_sr.w.l );
-		m_pc.d = RDMEML( 0xffff00 + 0x20 );
+		WRMEMW(m_xssp.d, m_sr.w.l);
+		m_pc.d = RDMEML(0xff'ff00 + 0x20);
 		m_cycles += 18;
 		m_prefetch_clear = true;
 
@@ -436,17 +439,17 @@ void tmp95c063_device::tlcs900_check_irqs()
 
 	/* Check regular irqs */
 	int irq_vectors[9] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
-	for( int i = 0; i < NUM_MASKABLE_IRQS; i++ )
+	for (int i = 0; i < NUM_MASKABLE_IRQS; i++)
 	{
-		if ( m_int_reg[tmp95c063_irq_vector_map[i].reg] & tmp95c063_irq_vector_map[i].iff )
+		if (m_int_reg[tmp95c063_irq_vector_map[i].reg] & tmp95c063_irq_vector_map[i].iff)
 		{
-			switch( tmp95c063_irq_vector_map[i].iff )
+			switch (tmp95c063_irq_vector_map[i].iff)
 			{
 			case 0x80:
-				irq_vectors[ ( m_int_reg[ tmp95c063_irq_vector_map[i].reg ] >> 4 ) & 0x07 ] = i;
+				irq_vectors[(m_int_reg[tmp95c063_irq_vector_map[i].reg] >> 4) & 0x07] = i;
 				break;
 			case 0x08:
-				irq_vectors[ m_int_reg[ tmp95c063_irq_vector_map[i].reg ] & 0x07 ] = i;
+				irq_vectors[m_int_reg[tmp95c063_irq_vector_map[i].reg] & 0x07] = i;
 				break;
 			}
 		}
@@ -455,9 +458,9 @@ void tmp95c063_device::tlcs900_check_irqs()
 	/* Check highest allowed priority irq */
 	int irq = -1;
 	int level = 0;
-	for ( int i = std::max( 1, ( ( m_sr.b.h & 0x70 ) >> 4 ) ); i < 7; i++ )
+	for (int i = std::max(1, ((m_sr.b.h & 0x70) >> 4)); i < 7; i++)
 	{
-		if ( irq_vectors[i] >= 0 )
+		if (irq_vectors[i] >= 0)
 		{
 			irq = irq_vectors[i];
 			level = i + 1;
@@ -465,45 +468,47 @@ void tmp95c063_device::tlcs900_check_irqs()
 	}
 
 	/* Take irq */
-	if ( irq >= 0 )
+	if (irq >= 0)
 	{
 		uint8_t vector = tmp95c063_irq_vector_map[irq].vector;
 
+		tlcs900_intnest_accept();
+
 		m_xssp.d -= 4;
-		WRMEML( m_xssp.d, m_pc.d );
+		WRMEML(m_xssp.d, m_pc.d);
 		m_xssp.d -= 2;
-		WRMEMW( m_xssp.d, m_sr.w.l );
+		WRMEMW(m_xssp.d, m_sr.w.l);
 
 		/* Mask off any lower priority interrupts  */
-		m_sr.b.h = ( m_sr.b.h & 0x8f ) | ( level << 4 );
+		m_sr.b.h = (m_sr.b.h & 0x8f) | (level << 4);
 
-		m_pc.d = RDMEML( 0xffff00 + vector );
+		m_pc.d = RDMEML(0xff'ff00 + vector);
 		m_cycles += 18;
 		m_prefetch_clear = true;
 
 		m_halted = 0;
 
 		/* Clear taken IRQ */
-		m_int_reg[ tmp95c063_irq_vector_map[irq].reg ] &= ~ tmp95c063_irq_vector_map[irq].iff;
+		m_int_reg[tmp95c063_irq_vector_map[irq].reg] &= ~tmp95c063_irq_vector_map[irq].iff;
 	}
 }
 
 
 void tmp95c063_device::tlcs900_handle_ad()
 {
-	if ( m_ad_cycles_left > 0 )
+	if (m_ad_cycles_left > 0)
 	{
 		m_ad_cycles_left -= m_cycles;
-		if ( m_ad_cycles_left <= 0 )
+		if (m_ad_cycles_left <= 0)
 		{
 			/* Store A/D converted value */
-			if ((m_ad_mode1 & 0x10) == 0)      // conversion channel fixed
+			if (!BIT(m_ad_mode1, 4))      // conversion channel fixed
 			{
 				m_ad_result[m_ad_mode2 & 0x03] = m_an_read[m_ad_mode2 & 0x07](0) & 0x3ff;
 			}
 			else            // conversion channel sweep
 			{
-				switch( m_ad_mode2 & 0x07 )
+				switch (m_ad_mode2 & 0x07)
 				{
 					case 0x00:      // AN0
 						m_ad_result[0] = m_an_read[0](0) & 0x3ff;
@@ -545,7 +550,7 @@ void tmp95c063_device::tlcs900_handle_ad()
 			}
 
 			/* Clear BUSY flag, set END flag */
-			m_ad_mode1 &= ~ 0x40;
+			m_ad_mode1 &= ~0x40;
 			m_ad_mode1 |= 0x80;
 
 			m_int_reg[INTE0AD] |= 0x80;
@@ -558,7 +563,7 @@ void tmp95c063_device::tlcs900_handle_ad()
 void tmp95c063_device::device_resolve_objects()
 {
 	m_nmi_state = CLEAR_LINE;
-	for( int i = 0; i < TLCS900_NUM_INPUTS; i++ )
+	for (int i = 0; i < TLCS900_NUM_INPUTS; i++)
 	{
 		m_level[i] = CLEAR_LINE;
 	}
@@ -670,29 +675,29 @@ uint8_t tmp95c063_device::t8run_r()
 
 void tmp95c063_device::t8run_w(uint8_t data)
 {
-	if ( ! ( data & 0x01 ) )
+	if (!BIT(data, 0))
 	{
 		m_timer_8[0] = 0;
 		m_timer_change[0] = 0;
 	}
-	if ( ! ( data & 0x02 ) )
+	if (!BIT(data, 1))
 	{
 		m_timer_8[1] = 0;
 		m_timer_change[1] = 0;
 	}
-	if ( ! ( data & 0x04 ) )
+	if (!BIT(data, 2))
 	{
 		m_timer_8[2] = 0;
 		m_timer_change[2] = 0;
 	}
-	if ( ! ( data & 0x08 ) )
+	if (!BIT(data, 3))
 	{
 		m_timer_8[3] = 0;
 		m_timer_change[3] = 0;
 	}
-	if ( ! ( data & 0x10 ) )
+	if (!BIT(data, 4))
 		m_timer_8[4] = 0;
-	if ( ! ( data & 0x20 ) )
+	if (!BIT(data, 5))
 		m_timer_8[5] = 0;
 
 	m_t8run = data;
@@ -720,28 +725,28 @@ uint8_t tmp95c063_device::t02ffcr_r()
 
 void tmp95c063_device::t02ffcr_w(uint8_t data)
 {
-	switch( data & 0x0c )
+	switch (data & 0x0c)
 	{
 	case 0x00:
-		//tlcs900_change_tff( 1, FF_INVERT );
+		//tlcs900_change_tff(1, FF_INVERT);
 		break;
 	case 0x04:
-		//tlcs900_change_tff( 1, FF_SET );
+		//tlcs900_change_tff(1, FF_SET);
 		break;
 	case 0x08:
-		//tlcs900_change_tff( 1, FF_CLEAR );
+		//tlcs900_change_tff(1, FF_CLEAR);
 		break;
 	}
-	switch( data & 0xc0 )
+	switch (data & 0xc0)
 	{
 	case 0x00:
-		//tlcs900_change_tff( 3, FF_INVERT );
+		//tlcs900_change_tff(3, FF_INVERT);
 		break;
 	case 0x40:
-		//tlcs900_change_tff( 3, FF_SET );
+		//tlcs900_change_tff(3, FF_SET);
 		break;
 	case 0x80:
-		//tlcs900_change_tff( 3, FF_CLEAR );
+		//tlcs900_change_tff(3, FF_CLEAR);
 		break;
 	}
 
@@ -795,28 +800,28 @@ uint8_t tmp95c063_device::t46ffcr_r()
 
 void tmp95c063_device::t46ffcr_w(uint8_t data)
 {
-	switch( data & 0x0c )
+	switch (data & 0x0c)
 	{
 	case 0x00:
-		//tlcs900_change_tff( 5, FF_INVERT );
+		//tlcs900_change_tff(5, FF_INVERT);
 		break;
 	case 0x04:
-		//tlcs900_change_tff( 5, FF_SET );
+		//tlcs900_change_tff(5, FF_SET);
 		break;
 	case 0x08:
-		//tlcs900_change_tff( 5, FF_CLEAR );
+		//tlcs900_change_tff(5, FF_CLEAR);
 		break;
 	}
-	switch( data & 0xc0 )
+	switch (data & 0xc0)
 	{
 	case 0x00:
-		//tlcs900_change_tff( 7, FF_INVERT );
+		//tlcs900_change_tff(7, FF_INVERT);
 		break;
 	case 0x40:
-		//tlcs900_change_tff( 7, FF_SET );
+		//tlcs900_change_tff(7, FF_SET);
 		break;
 	case 0x80:
-		//tlcs900_change_tff( 7, FF_CLEAR );
+		//tlcs900_change_tff(7, FF_CLEAR);
 		break;
 	}
 
@@ -871,28 +876,28 @@ uint8_t tmp95c063_device::t8ffcr_r()
 
 void tmp95c063_device::t8ffcr_w(uint8_t data)
 {
-	switch( data & 0x03 )
+	switch (data & 0x03)
 	{
 	case 0x00:
-		//tlcs900_change_tff( 8, FF_INVERT );
+		//tlcs900_change_tff(8, FF_INVERT);
 		break;
 	case 0x01:
-		//tlcs900_change_tff( 8, FF_SET );
+		//tlcs900_change_tff(8, FF_SET);
 		break;
 	case 0x02:
-		//tlcs900_change_tff( 8, FF_CLEAR );
+		//tlcs900_change_tff(8, FF_CLEAR);
 		break;
 	}
-	switch( data & 0xc0 )
+	switch (data & 0xc0)
 	{
 	case 0x00:
-		//tlcs900_change_tff( 9, FF_INVERT );
+		//tlcs900_change_tff(9, FF_INVERT);
 		break;
 	case 0x40:
-		//tlcs900_change_tff( 9, FF_SET );
+		//tlcs900_change_tff(9, FF_SET);
 		break;
 	case 0x80:
-		//tlcs900_change_tff( 9, FF_CLEAR );
+		//tlcs900_change_tff(9, FF_CLEAR);
 		break;
 	}
 
@@ -952,28 +957,28 @@ uint8_t tmp95c063_device::t9ffcr_r()
 
 void tmp95c063_device::t9ffcr_w(uint8_t data)
 {
-	switch( data & 0x03 )
+	switch (data & 0x03)
 	{
 	case 0x00:
-		//tlcs900_change_tff( 0xa, FF_INVERT );
+		//tlcs900_change_tff(0xa, FF_INVERT);
 		break;
 	case 0x01:
-		//tlcs900_change_tff( 0xa, FF_SET );
+		//tlcs900_change_tff(0xa, FF_SET);
 		break;
 	case 0x02:
-		//tlcs900_change_tff( 0xa, FF_CLEAR );
+		//tlcs900_change_tff(0xa, FF_CLEAR);
 		break;
 	}
-	switch( data & 0xc0 )
+	switch (data & 0xc0)
 	{
 	case 0x00:
-		//tlcs900_change_tff( 0xb, FF_INVERT );
+		//tlcs900_change_tff(0xb, FF_INVERT);
 		break;
 	case 0x40:
-		//tlcs900_change_tff( 0xb, FF_SET );
+		//tlcs900_change_tff(0xb, FF_SET);
 		break;
 	case 0x80:
-		//tlcs900_change_tff( 0xb, FF_CLEAR );
+		//tlcs900_change_tff(0xb, FF_CLEAR);
 		break;
 	}
 
@@ -1126,10 +1131,10 @@ uint8_t tmp95c063_device::admod1_r()
 void tmp95c063_device::admod1_w(uint8_t data)
 {
 	// Preserve read-only bits
-	data = ( m_ad_mode1 & 0xc0 ) | ( data & 0x34 );
+	data = (m_ad_mode1 & 0xc0) | (data & 0x34);
 
 	// Check for A/D conversion start
-	if (data & 0x04)
+	if (BIT(data, 2))
 	{
 		data &= ~0x04;
 		data |= 0x40;
@@ -1172,10 +1177,10 @@ uint8_t tmp95c063_device::inte_r(offs_t offset)
 
 void tmp95c063_device::inte_w(offs_t offset, uint8_t data)
 {
-	if ( data & 0x80 )
-		data = ( data & 0x7f ) | ( m_int_reg[offset] & 0x80 );
-	if ( data & 0x08 )
-		data = ( data & 0xf7 ) | ( m_int_reg[offset] & 0x08 );
+	if (BIT(data, 7))
+		data = (data & 0x7f) | (m_int_reg[offset] & 0x80);
+	if (BIT(data, 3))
+		data = (data & 0xf7) | (m_int_reg[offset] & 0x08);
 
 	m_int_reg[offset] = data;
 	m_check_irqs = 1;
@@ -1278,11 +1283,11 @@ void tmp95c063_device::dareg_w(offs_t offset, uint8_t data)
 
 void tmp95c063_device::execute_set_input(int input, int level)
 {
-	switch( input )
+	switch (input)
 	{
 	case INPUT_LINE_NMI:
 	case TLCS900_NMI:
-		if ( m_level[TLCS900_NMI] == CLEAR_LINE && level == ASSERT_LINE )
+		if (m_level[TLCS900_NMI] == CLEAR_LINE && level == ASSERT_LINE)
 		{
 			m_nmi_state = level;
 		}
@@ -1294,9 +1299,9 @@ void tmp95c063_device::execute_set_input(int input, int level)
 
 	case TLCS900_INT0:
 		/* Is INT0 functionality enabled? */
-		if (m_iimc & 0x04)
+		if (BIT(m_iimc, 2))
 		{
-			if (m_iimc & 0x02)
+			if (BIT(m_iimc, 1))
 			{
 				/* Rising edge detect */
 				if (m_level[TLCS900_INT0] == CLEAR_LINE && level == ASSERT_LINE)
@@ -1312,7 +1317,7 @@ void tmp95c063_device::execute_set_input(int input, int level)
 				if (level == ASSERT_LINE)
 					m_int_reg[INTE0AD] |= 0x08;
 				else
-					m_int_reg[INTE0AD] &= ~ 0x08;
+					m_int_reg[INTE0AD] &= ~0x08;
 			}
 		}
 		m_level[TLCS900_INT0] = level;
@@ -1355,9 +1360,9 @@ void tmp95c063_device::execute_set_input(int input, int level)
 		break;
 
 	case TLCS900_INT4:
-		if ( ! ( m_port_control[0xb] & 0x01 ) )
+		if (!BIT(m_port_control[0xb], 0))
 		{
-			if ( m_level[TLCS900_INT4] == CLEAR_LINE && level == ASSERT_LINE )
+			if (m_level[TLCS900_INT4] == CLEAR_LINE && level == ASSERT_LINE)
 			{
 				m_int_reg[INTE34] |= 0x80;
 			}
@@ -1366,9 +1371,9 @@ void tmp95c063_device::execute_set_input(int input, int level)
 		break;
 
 	case TLCS900_INT5:
-		if ( ! ( m_port_control[0xb] & 0x02 ) )
+		if (!BIT(m_port_control[0xb], 1))
 		{
-			if ( m_level[TLCS900_INT5] == CLEAR_LINE && level == ASSERT_LINE )
+			if (m_level[TLCS900_INT5] == CLEAR_LINE && level == ASSERT_LINE)
 			{
 				m_int_reg[INTE56] |= 0x08;
 			}
@@ -1389,9 +1394,9 @@ void tmp95c063_device::execute_set_input(int input, int level)
 		break;
 
 	case TLCS900_TIO:   /* External timer input for timer 0 */
-		if ( ( m_t8run & 0x01 ) && ( m_t8_mode[0] & 0x03 ) == 0x00 )
+		if (BIT(m_t8run, 0) && (m_t8_mode[0] & 0x03) == 0x00)
 		{
-			if ( m_level[TLCS900_TIO] == CLEAR_LINE && level == ASSERT_LINE )
+			if (m_level[TLCS900_TIO] == CLEAR_LINE && level == ASSERT_LINE)
 			{
 				m_timer_change[0] += 1;
 			}
@@ -1400,4 +1405,61 @@ void tmp95c063_device::execute_set_input(int input, int level)
 		break;
 	}
 	m_check_irqs = 1;
+}
+
+static std::pair<u16, char const *> const tmp95c063_syms[] = {
+	{ 0x01, "P1" }, { 0x04, "P1CR" }, { 0x06, "P2" }, { 0x09, "P2FC" },
+	{ 0x0d, "P5" }, { 0x10, "P5CR" }, { 0x11, "P5FC" },
+	{ 0x12, "P6" }, { 0x13, "P7" }, { 0x15, "P6FC" }, { 0x16, "P7CR" }, { 0x17, "P7FC" },
+	{ 0x18, "P8" }, { 0x19, "P9" }, { 0x1a, "P8CR" }, { 0x1b, "P8FC" }, { 0x1c, "P9CR" }, { 0x1d, "P9FC" },
+	{ 0x1e, "PA" }, { 0x1f, "PB" },
+	{ 0x20, "T8RUN" }, { 0x21, "TRDC" }, { 0x22, "TREG0" },
+	{ 0x23, "TREG1" }, { 0x24, "T01MOD" }, { 0x25, "T02FFCR" },
+	{ 0x26, "TREG2" }, { 0x27, "TREG3" }, { 0x28, "T23MOD" },
+	{ 0x29, "TREG4" }, { 0x2a, "TREG5" }, { 0x2b, "T45MOD" },
+	{ 0x2c, "TA46FFCR" }, { 0x2d, "TREG6" }, { 0x2e, "TREG7" },
+	{ 0x2f, "T67MOD" }, { 0x30, "TREG8L" }, { 0x31, "TREG8H" },
+	{ 0x32, "TREG9L" }, { 0x33, "TREG9H" }, { 0x34, "CAP1L" },
+	{ 0x35, "CAP1H" }, { 0x36, "CAP2L" }, { 0x37, "CAP2H" },
+	{ 0x38, "T8MOD" }, { 0x39, "T8FFCR" }, { 0x3a, "T89CR" },
+	{ 0x3b, "T16RUN" },
+	{ 0x40, "TREGAL" }, { 0x41, "TREGAH" }, { 0x42, "TREGBL" }, { 0x43, "TREGBH" },
+	{ 0x44, "CAP3L" }, { 0x45, "CAP3H" }, { 0x46, "CAP4L" }, { 0x47, "CAP4H" },
+	{ 0x48, "T9MOD" }, { 0x49, "T9FFCR" },
+	{ 0x4a, "DAREG0" }, { 0x4b, "DAREG1" },
+	{ 0x4c, "PG0REG" }, { 0x4d, "PG1REG" }, { 0x4e, "PG01CR" }, { 0x4f, "DADRV" },
+	{ 0x50, "SC0BUF" }, { 0x51, "SC0CR" }, { 0x52, "SC0MOD" }, { 0x53, "BR0CR" },
+	{ 0x54, "SC1BUF" }, { 0x55, "SC1CR" }, { 0x56, "SC1MOD" }, { 0x57, "BR1CR" },
+	{ 0x58, "ODE" },
+	{ 0x5a, "DMA0V" }, { 0x5b, "DMA1V" }, { 0x5c, "DMA2V" }, { 0x5d, "DMA3V" },
+	{ 0x5e, "ADMOD1" }, { 0x5f, "ADMOD2" },
+	{ 0x60, "ADREG04L" }, { 0x61, "ADREG04H" }, { 0x62, "ADREG15L" }, { 0x63, "ADREG15H" },
+	{ 0x64, "ADREG26L" }, { 0x65, "ADREG26H" }, { 0x66, "ADREG37L" }, { 0x67, "ADREG37H" },
+	{ 0x6a, "SDMACR0" }, { 0x6b, "SDMACR1" }, { 0x6c, "SDMACR2" }, { 0x6d, "SDMACR3" },
+	{ 0x6e, "WDMOD" }, { 0x6f, "WDCR" },
+	{ 0x70, "INTE_0AD" }, { 0x71, "INTE12" },
+	{ 0x72, "INTE34" }, { 0x73, "INTE56" }, { 0x74, "INT78" },
+	{ 0x75, "INTET01" }, { 0x76, "INTET32" }, { 0x77, "INTET45" },
+	{ 0x78, "INTET67" }, { 0x79, "INTET89" }, { 0x7a, "INTETAB" },
+	{ 0x7b, "INTES0" }, { 0x7c, "INTES1" }, { 0x7d, "INTETC01" },
+	{ 0x7e, "INTETC23" }, { 0x7f, "IIMC" },
+	{ 0x80, "PACR" }, { 0x81, "PAFC" }, { 0x82, "PBCR" }, { 0x83, "PBFC" },
+	{ 0x84, "PC" }, { 0x85, "PD"}, { 0x88, "PDCR" }, { 0x8a, "PE" }, { 0x8c, "PECR" },
+	{ 0x8f, "BEXCS" },
+	{ 0x90, "B0CS" }, { 0x91, "B1CS" }, { 0x92, "B2CS" }, { 0x93, "B3CS" },
+	{ 0x94, "MSAR0" }, { 0x95, "MAMR0" }, { 0x96, "MSAR1" }, { 0x97, "MAMR1" },
+	{ 0x98, "MSAR2" }, { 0x99, "MAMR2" }, { 0x9a, "MSAR3" }, { 0x9b, "MAMR3" },
+	{ 0x9c, "DREFCR1" }, { 0x9d, "DMEMCR1" }, { 0x9e, "DREFCR3" }, { 0x9f, "DMEMCR3" }
+};
+
+static tlcs900_disassembler::cr_sym const tmp95c063_cr_syms[] = {
+	{ 8,  0x22, "DMAM0" }, { 8,  0x26, "DMAM1" }, { 8,  0x2a, "DMAM2" }, { 8,  0x2e, "DMAM3" },
+	{ 16, 0x20, "DMAC0" }, { 16, 0x24, "DMAC1" }, { 16, 0x28, "DMAC2" }, { 16, 0x2c, "DMAC3" },
+	{ 32, 0x00, "DMAS0" }, { 32, 0x04, "DMAS1" }, { 32, 0x08, "DMAS2" }, { 32, 0x0c, "DMAS3" },
+	{ 32, 0x10, "DMAD0" }, { 32, 0x14, "DMAD1" }, { 32, 0x18, "DMAD2" }, { 32, 0x1c, "DMAD3" },
+};
+
+std::unique_ptr<util::disasm_interface> tmp95c063_device::create_disassembler()
+{
+	return std::make_unique<tlcs900_disassembler>(tmp95c063_syms, tmp95c063_cr_syms);
 }

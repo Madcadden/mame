@@ -44,6 +44,7 @@ constexpr int DEVSEL_ADDRESS(0xfe);
 #define LOG_STATE     (1U << 1)
 #define LOG_READLINE  (1U << 2)
 #define LOG_WRITELINE (1U << 3)
+#define LOG_SELECT    (1U << 4)
 
 #define VERBOSE       (0)
 #include "logmacro.h"
@@ -65,6 +66,7 @@ DEFINE_DEVICE_TYPE(I2C_X2404P,  i2c_x2404p_device,  "x2404p",  "X2404P I2C Memor
 DEFINE_DEVICE_TYPE(I2C_24C08,   i2c_24c08_device,   "24c08",   "24C08 I2C Memory")
 DEFINE_DEVICE_TYPE(I2C_24C16,   i2c_24c16_device,   "24c16",   "24C16 I2C Memory")
 DEFINE_DEVICE_TYPE(I2C_24C64,   i2c_24c64_device,   "24c64",   "24C64 I2C Memory")
+DEFINE_DEVICE_TYPE(I2C_24C65,   i2c_24c65_device,   "24c65",   "24C65 I2C Memory")
 DEFINE_DEVICE_TYPE(I2C_24C128,  i2c_24c128_device,  "24c128",  "24C128 I2C Memory")
 DEFINE_DEVICE_TYPE(I2C_24C256,  i2c_24c256_device,  "24c256",  "24C256 I2C Memory")
 DEFINE_DEVICE_TYPE(I2C_24C512,  i2c_24c512_device,  "24c512",  "24C512 I2C Memory")
@@ -172,6 +174,12 @@ i2c_24c16_device::i2c_24c16_device(const machine_config &mconfig, const char *ta
 
 i2c_24c64_device::i2c_24c64_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	i2cmem_device(mconfig, I2C_24C64, tag, owner, clock, 0, 32, 0x2000)
+{
+}
+
+// TODO: write protection differs too compared to '64
+i2c_24c65_device::i2c_24c65_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
+	i2cmem_device(mconfig, I2C_24C65, tag, owner, clock, 0, 64, 0x2000)
 {
 }
 
@@ -600,9 +608,11 @@ int i2cmem_device::select_device()
 
 	if( ( m_devsel & mask ) == ( device & mask ) )
 	{
+		LOGMASKED( LOG_SELECT, "i2c: device selected, %02x & %08x matches our address %02x & %08x\n", m_devsel, mask, device, mask);
 		return 1;
 	}
 
+	LOGMASKED( LOG_SELECT, "i2c: not selected, device address %02x does not match our address %02x\n", m_devsel & mask, device & mask);
 	return 0;
 }
 

@@ -26,8 +26,6 @@
 #include "machine/msm6242.h"
 #include "sound/okim6295.h"
 #include "video/huc6202.h"
-#include "video/huc6260.h"
-#include "video/huc6270.h"
 
 #include "screen.h"
 #include "speaker.h"
@@ -47,15 +45,15 @@ public:
 		, m_irqs(*this, "irqs")
 	{ }
 
-	void ggconnie(machine_config &config);
+	void ggconnie(machine_config &config) ATTR_COLD;
 
 protected:
 	virtual void machine_start() override ATTR_COLD;
 
 private:
-	void lamp_w(uint8_t data);
-	void output_w(uint8_t data);
-	void oki_bank_w(offs_t offset, uint8_t data);
+	void lamp_w(u8 data);
+	void output_w(u8 data);
+	void oki_bank_w(offs_t offset, u8 data);
 	void sgx_io(address_map &map) ATTR_COLD;
 	void sgx_mem(address_map &map) ATTR_COLD;
 	void oki_map(address_map &map) ATTR_COLD;
@@ -70,18 +68,18 @@ private:
 
 void ggconnie_state::machine_start()
 {
-	m_lamp.resolve();
+	pce_common_state::machine_start();
 
 	for (auto &okibank : m_okibank)
 		okibank->configure_entries(0, 8, memregion("oki")->base(), 0x10000);
 }
 
-void ggconnie_state::lamp_w(uint8_t data)
+void ggconnie_state::lamp_w(u8 data)
 {
 	m_lamp = !BIT(data, 0);
 }
 
-void ggconnie_state::output_w(uint8_t data)
+void ggconnie_state::output_w(u8 data)
 {
 	// written in "Output Test" in test mode
 }
@@ -91,7 +89,7 @@ void ggconnie_state::output_w(uint8_t data)
 // - It definitely uses 4 registers for sound, on a ROM that has 8x sound tables.
 // - Is the ROM dumped correctly? This arrangement can definitely make more sense with a $20000 granularity,
 //   where banks 1-3 just touches data instead.
-void ggconnie_state::oki_bank_w(offs_t offset, uint8_t data)
+void ggconnie_state::oki_bank_w(offs_t offset, u8 data)
 {
 	m_okibank[offset]->set_entry(data & 0x07);
 	// popmessage("offset: %02x, bank: %02x\n", offset, data);
@@ -112,9 +110,9 @@ void ggconnie_state::sgx_mem(address_map &map)
 	map(0x1f7500, 0x1f750f).rw(m_rtc, FUNC(msm6242_device::read), FUNC(msm6242_device::write));
 	map(0x1f7700, 0x1f7700).portr("IN1");
 	map(0x1f7800, 0x1f7800).w(FUNC(ggconnie_state::output_w));
-	map(0x1fe000, 0x1fe007).rw("huc6270_0", FUNC(huc6270_device::read), FUNC(huc6270_device::write)).mirror(0x03e0);
+	map(0x1fe000, 0x1fe007).rw("huc6270_0", FUNC(huc6270_device::read8), FUNC(huc6270_device::write8)).mirror(0x03e0);
 	map(0x1fe008, 0x1fe00f).rw("huc6202", FUNC(huc6202_device::read), FUNC(huc6202_device::write)).mirror(0x03e0);
-	map(0x1fe010, 0x1fe017).rw("huc6270_1", FUNC(huc6270_device::read), FUNC(huc6270_device::write)).mirror(0x03e0);
+	map(0x1fe010, 0x1fe017).rw("huc6270_1", FUNC(huc6270_device::read8), FUNC(huc6270_device::write8)).mirror(0x03e0);
 	map(0x1fe400, 0x1fe7ff).rw(m_huc6260, FUNC(huc6260_device::read), FUNC(huc6260_device::write));
 }
 
@@ -196,7 +194,7 @@ static INPUT_PORTS_START(ggconnie)
 	PORT_DIPSETTING(0xc0, DEF_STR(Normal))
 
 	PORT_START("SWC")
-	PORT_DIPNAME(0x03, 0x03, "Demo Sound" )  PORT_DIPLOCATION("SWC:1,2")
+	PORT_DIPNAME(0x03, 0x03, DEF_STR( Demo_Sounds ) )  PORT_DIPLOCATION("SWC:1,2")  // "Demo Sound"
 	PORT_DIPSETTING(0x00, DEF_STR(Off) )
 	PORT_DIPSETTING(0x01, "3/1" )
 	PORT_DIPSETTING(0x02, "2/1" )
@@ -281,7 +279,7 @@ static INPUT_PORTS_START(smf)
 	PORT_DIPSETTING(0xc0, DEF_STR(Normal))
 
 	PORT_START("SWC")
-	PORT_DIPNAME(0x03, 0x03, "Demo Sound" )  PORT_DIPLOCATION("SWC:1,2")
+	PORT_DIPNAME(0x03, 0x03, DEF_STR( Demo_Sounds ) )  PORT_DIPLOCATION("SWC:1,2")
 	PORT_DIPSETTING(0x00, DEF_STR(Off) )
 	PORT_DIPSETTING(0x01, "1/3" )
 	PORT_DIPSETTING(0x02, "1/2" )
@@ -410,44 +408,42 @@ void ggconnie_state::ggconnie(machine_config &config)
 	m_maincpu->add_route(1, "speaker", 1.00, 1);
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_raw(PCE_MAIN_CLOCK, huc6260_device::WPF, 64, 64 + 1024 + 64, huc6260_device::LPF, 18, 18 + 242);
-	screen.set_screen_update(FUNC(ggconnie_state::screen_update));
+	screen.set_screen_update(m_huc6260, FUNC(huc6260_device::screen_update));
 	screen.set_palette(m_huc6260);
 
 	HUC6260(config, m_huc6260, PCE_MAIN_CLOCK);
 	m_huc6260->next_pixel_data().set("huc6202", FUNC(huc6202_device::next_pixel));
 	m_huc6260->time_til_next_event().set("huc6202", FUNC(huc6202_device::time_until_next_event));
-	m_huc6260->vsync_changed().set("huc6202", FUNC(huc6202_device::vsync_changed));
-	m_huc6260->hsync_changed().set("huc6202", FUNC(huc6202_device::hsync_changed));
+	m_huc6260->vsync_changed().set("huc6270_0", FUNC(huc6270_device::vsync_changed));
+	m_huc6260->vsync_changed().append("huc6270_1", FUNC(huc6270_device::vsync_changed));
+	m_huc6260->hsync_changed().set("huc6270_0", FUNC(huc6270_device::hsync_changed));
+	m_huc6260->hsync_changed().append("huc6270_1", FUNC(huc6270_device::hsync_changed));
 
 	INPUT_MERGER_ANY_HIGH(config, m_irqs).output_handler().set_inputline(m_maincpu, 0);
 
-	huc6270_device &huc6270_0(HUC6270(config, "huc6270_0", 0));
+	huc6270_device &huc6270_0(HUC6270(config, "huc6270_0", PCE_MAIN_CLOCK));
 	huc6270_0.set_vram_size(0x10000);
 	huc6270_0.irq().set(m_irqs, FUNC(input_merger_device::in_w<0>));
 
-	huc6270_device &huc6270_1(HUC6270(config, "huc6270_1", 0));
+	huc6270_device &huc6270_1(HUC6270(config, "huc6270_1", PCE_MAIN_CLOCK));
 	huc6270_1.set_vram_size(0x10000);
 	huc6270_1.irq().set(m_irqs, FUNC(input_merger_device::in_w<1>));
 
-	huc6202_device &huc6202(HUC6202(config, "huc6202", 0 ));
+	huc6202_device &huc6202(HUC6202(config, "huc6202", PCE_MAIN_CLOCK));
 	huc6202.next_pixel_0_callback().set("huc6270_0", FUNC(huc6270_device::next_pixel));
 	huc6202.time_til_next_event_0_callback().set("huc6270_0", FUNC(huc6270_device::time_until_next_event));
-	huc6202.vsync_changed_0_callback().set("huc6270_0", FUNC(huc6270_device::vsync_changed));
-	huc6202.hsync_changed_0_callback().set("huc6270_0", FUNC(huc6270_device::hsync_changed));
-	huc6202.read_0_callback().set("huc6270_0", FUNC(huc6270_device::read));
-	huc6202.write_0_callback().set("huc6270_0", FUNC(huc6270_device::write));
+	huc6202.read_0_callback().set("huc6270_0", FUNC(huc6270_device::read8));
+	huc6202.write_0_callback().set("huc6270_0", FUNC(huc6270_device::write8));
 	huc6202.next_pixel_1_callback().set("huc6270_1", FUNC(huc6270_device::next_pixel));
 	huc6202.time_til_next_event_1_callback().set("huc6270_1", FUNC(huc6270_device::time_until_next_event));
-	huc6202.vsync_changed_1_callback().set("huc6270_1", FUNC(huc6270_device::vsync_changed));
-	huc6202.hsync_changed_1_callback().set("huc6270_1", FUNC(huc6270_device::hsync_changed));
-	huc6202.read_1_callback().set("huc6270_1", FUNC(huc6270_device::read));
-	huc6202.write_1_callback().set("huc6270_1", FUNC(huc6270_device::write));
+	huc6202.read_1_callback().set("huc6270_1", FUNC(huc6270_device::read8));
+	huc6202.write_1_callback().set("huc6270_1", FUNC(huc6270_device::write8));
 
 	MSM6242(config, m_rtc, XTAL(32'768));
 
-	SPEAKER(config, "speaker", 2).front();
+	SPEAKER(config, "speaker", 2).front(); // TODO: correct?
 
 	OKIM6295(config, m_oki, 2_MHz_XTAL, okim6295_device::PIN7_HIGH); // 2MHz resonator, pin 7 verified
 	m_oki->set_addrmap(0, &ggconnie_state::oki_map);
@@ -455,10 +451,10 @@ void ggconnie_state::ggconnie(machine_config &config)
 	m_oki->add_route(ALL_OUTPUTS, "speaker", 1.00, 1);
 }
 
-ROM_START(ggconnie)
+ROM_START( ggconnie )
 	ROM_REGION( 0x180000, "maincpu", 0 )
 	ROM_LOAD( "prg0_u3_ver.2.bin", 0x00000, 0x80000, CRC(5e104855) SHA1(3ab2b1ec1fc3aefbb57d9b2ba272e75b34b69383) )
-	ROM_LOAD( "prg1_u4.bin", 0x80000, 0x80000, CRC(513f0b18) SHA1(44c61dc1a06bb4c8b4840ea6a372f92114888490) )
+	ROM_LOAD( "prg1_u4.bin",       0x80000, 0x80000, CRC(513f0b18) SHA1(44c61dc1a06bb4c8b4840ea6a372f92114888490) )
 	// u5 not populated
 
 	ROM_REGION( 0x80000, "oki", 0 )
@@ -466,7 +462,7 @@ ROM_START(ggconnie)
 ROM_END
 
 // TODO: verify OKI banking, hopper, lamps
-ROM_START(smf)
+ROM_START( smf )
 	ROM_REGION( 0x180000, "maincpu", 0 )
 	ROM_LOAD( "smf03.u3", 0x000000, 0x80000, CRC(2435ff3d) SHA1(4de1c5c2ed4ce2be5f3bb3fd31e176c8e24c7155) ) // 27c040
 	ROM_LOAD( "smf05.u4", 0x080000, 0x80000, CRC(7c477ae1) SHA1(ecdc1bf7052121f4ce3ef222c0f51d72057a3a2b) ) // 27c040
@@ -481,7 +477,7 @@ ROM_START(smf)
 	ROM_LOAD( "gal16v8b.u8", 0x400, 0x117, NO_DUMP )
 ROM_END
 
-ROM_START(fishingm)
+ROM_START( fishingm )
 	ROM_REGION( 0x180000, "maincpu", 0 )
 	ROM_LOAD( "fim03-u3.bin", 0x000000, 0x80000, CRC(d70db2fc) SHA1(9f2f417665089da7d745dfcb311e97818b1d3c11) )
 	ROM_LOAD( "fim05-u4.bin", 0x080000, 0x80000, CRC(1bd8344f) SHA1(4e082d40af83fb5f6313c61ffbc47bc71373a9cf) )
@@ -496,7 +492,7 @@ ROM_START(fishingm)
 	ROM_LOAD( "gal16v8b.u8", 0x400, 0x117, NO_DUMP )
 ROM_END
 
-ROM_START(bmanroul)
+ROM_START( bmanroul )
 	ROM_REGION( 0x180000, "maincpu", 0 )
 	ROM_LOAD( "bon_prg0.u3", 0x000000, 0x80000, CRC(0db0960d) SHA1(59cbd9d87608894d8965268c1a0eb81d55a6d742) )
 	ROM_LOAD( "bon_prg1.u4", 0x080000, 0x80000, CRC(412fd212) SHA1(35f8e94076beff9a637f508f74a89315f02de130) )
@@ -511,6 +507,21 @@ ROM_START(bmanroul)
 	ROM_LOAD( "gal16v8b.u8", 0x400, 0x117, NO_DUMP )
 ROM_END
 
+ROM_START( junghero )
+	ROM_REGION( 0x180000, "maincpu", 0 )
+	ROM_LOAD( "juh03_u3.u3", 0x000000, 0x80000, CRC(f949947c) SHA1(6703995967b4bbd71be6171e87321d3c12167120) )
+	ROM_LOAD( "juh05_u4.u4", 0x080000, 0x80000, CRC(55e6c6db) SHA1(598c5e97f063f08bd29da9a230307994d112ccf6) )
+	ROM_LOAD( "juh04_u5.u5", 0x100000, 0x80000, CRC(ef513c46) SHA1(5b89b2bc068b56fbbfb910e87ab8f5e12178d001) )
+
+	ROM_REGION( 0x80000, "oki", 0 )
+	ROM_LOAD( "juh01_u31.u31", 0x00000, 0x80000, CRC(01ee3b11) SHA1(f78e15ebb11ccdb4e6361149d9a03bb0f46c613a) )
+
+	ROM_REGION( 0x600, "plds", 0 ) // protected
+	ROM_LOAD( "gal16v8b.u6", 0x000, 0x117, NO_DUMP )
+	ROM_LOAD( "gal16v8b.u7", 0x200, 0x117, NO_DUMP )
+	ROM_LOAD( "gal16v8b.u8", 0x400, 0x117, NO_DUMP )
+ROM_END
+
 } // anonymous namespace
 
 
@@ -518,3 +529,4 @@ GAME( 1996, ggconnie, 0, ggconnie, ggconnie, ggconnie_state, init_pce_common, RO
 GAME( 1996, bmanroul, 0, ggconnie, bmanroul, ggconnie_state, init_pce_common, ROT0, "Eighting (Hudson Soft license)", "Bomberman Misobon Roulette (961028 JPN)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING ) // "
 GAME( 1997, smf,      0, ggconnie, smf,      ggconnie_state, init_pce_common, ROT0, "Eighting (Capcom license)", "Super Medal Fighters (Japan 970228)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING ) // Throws Hopper Jam when using COIN1, sound
 GAME( 1997, fishingm, 0, ggconnie, fishingm, ggconnie_state, init_pce_common, ROT0, "Capcom", "Fishing Master (971107 JPN)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING ) // Hopper Jam Error
+GAME( 1997, junghero, 0, ggconnie, smf,      ggconnie_state, init_pce_common, ROT0, "Capcom", "Jungle Hero (Japan 970627)", MACHINE_IMPERFECT_SOUND | MACHINE_NOT_WORKING ) // Throws Hopper Jam when using COIN1, sound

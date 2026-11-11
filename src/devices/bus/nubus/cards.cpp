@@ -27,7 +27,6 @@
 #include "pds30_30hr.h"
 #include "pds30_cb264.h"
 #include "pds30_procolor816.h"
-#include "pds30_sigmalview.h"
 #include "quadralink.h"
 #include "thunder4gx.h"
 
@@ -87,6 +86,7 @@ void mac_pdslc_cards(device_slot_interface &device)
 	device.option_add("macconilc", PDSLC_MACCONILC);    // Asante MacCON i LC Ethernet card
 	device.option_add("enetlc", PDSLC_ENETLC);          // Apple Ethernet LC
 	device.option_add("enetlctp", PDSLC_ENETLCTP);      // Apple Ethernet LC Twisted Pair
+	device.option_add("ethermaclc", PDSLC_ETHERMACLC);  // Farallon EtherMac LC-TP
 }
 
 // cards for the LC PDS slot that work in the original LC

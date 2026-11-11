@@ -292,7 +292,7 @@
 #include "emu.h"
 
 #include "cpu/mcs48/mcs48.h"
-#include "cpu/mcs51/mcs51.h"
+#include "cpu/mcs51/i8051.h"
 #include "machine/ds1215.h"
 #include "machine/i8255.h"
 #include "machine/nvram.h"
@@ -455,7 +455,7 @@ private:
 	void babypkr_palette(palette_device &palette) const;
 
 	void i8751_map(address_map &map) ATTR_COLD;
-	void i8751_io_port(address_map &map) ATTR_COLD;
+	void i8751_data_port(address_map &map) ATTR_COLD;
 	void i8051_sound_mem(address_map &map) ATTR_COLD;
 	void i8051_sound_port(address_map &map) ATTR_COLD;
 
@@ -603,7 +603,6 @@ VIDEO_START_MEMBER(videopkr_state,vidadcba)
 
 uint32_t videopkr_state::screen_update_videopkr(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
-	m_bg_tilemap->mark_all_dirty();
 	m_bg_tilemap->draw(screen, bitmap, cliprect, 0, 0);
 	return 0;
 }
@@ -913,6 +912,9 @@ void babypkr_state::bpoker_p1_data_w(uint8_t data)
 {
 	m_p1 = data;
 
+	m_videobank->set_entry((data >> 6) & 0x03);
+	m_colorbank->set_entry((data >> 6) & 0x03);
+
 	m_lamps[8] = BIT(data, 0);    // Aux_0 - Jackpot mechanical counter (Baby Games)
 	m_lamps[9] = BIT(data, 1);    // Aux_1 -
 	m_lamps[10] = BIT(data, 2);   // Aux_2 -
@@ -1102,7 +1104,7 @@ void babypkr_state::i8751_map(address_map &map)
 	map(0x0000, 0x7fff).rom();
 }
 
-void babypkr_state::i8751_io_port(address_map &map)
+void babypkr_state::i8751_data_port(address_map &map)
 {
 	map(0x0000, 0x3fff).ram().share("nvram");
 	map(0x4900, 0x49ff).rw(FUNC(babypkr_state::bp_timekeep_r), FUNC(babypkr_state::bp_timekeep_w));
@@ -1121,7 +1123,7 @@ void babypkr_state::i8751_io_port(address_map &map)
 
 static INPUT_PORTS_START( videopkr )
 	PORT_START("IN0")
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_GAMBLE_DOOR )
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_DOOR )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_GAMBLE_BOOK )
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_COIN1 )         PORT_IMPULSE(2)
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_START1 )        PORT_NAME("Start")
@@ -1146,7 +1148,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( blckjack )
 	PORT_START("IN0")
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_GAMBLE_DOOR )
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_DOOR )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_GAMBLE_BOOK )
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_COIN1 )         PORT_IMPULSE(2)
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_START1 )        PORT_NAME("Deal")
@@ -1171,7 +1173,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( videodad )
 	PORT_START("IN0")
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_GAMBLE_DOOR )
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_DOOR )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_GAMBLE_BOOK )
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_COIN1 )         PORT_IMPULSE(2)
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_GAMBLE_TAKE )
@@ -1196,7 +1198,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( videocba )
 	PORT_START("IN0")
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_GAMBLE_DOOR )
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_DOOR )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_GAMBLE_BOOK )
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_COIN1 )         PORT_IMPULSE(2)
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_START1 )        PORT_NAME("Start")
@@ -1221,7 +1223,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( babypkr )
 	PORT_START("IN0")
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_GAMBLE_DOOR )
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_DOOR )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_GAMBLE_BOOK )
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_COIN1 )         PORT_IMPULSE(2)
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_START1 )        PORT_NAME("Start")
@@ -1248,7 +1250,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( babydad )
 	PORT_START("IN0")
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_GAMBLE_DOOR )
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_DOOR )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_GAMBLE_BOOK )
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_COIN1 )         PORT_IMPULSE(2)
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_GAMBLE_TAKE )
@@ -1273,7 +1275,7 @@ INPUT_PORTS_END
 
 static INPUT_PORTS_START( bpoker )
 	PORT_START("IN0")
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_GAMBLE_DOOR )
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_DOOR )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_GAMBLE_BOOK )
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_COIN1 )         PORT_IMPULSE(2)
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_START1 )        PORT_NAME("Start")
@@ -1371,9 +1373,6 @@ void videopkr_state::machine_start()
 	m_videobank->set_entry(3);
 	m_colorbank->set_entry(3);
 
-	m_digits.resolve();
-	m_lamps.resolve();
-
 	m_vp_sound_p2 = 0xff;   // default P2 latch value
 	m_sound_latch = 0xff;   // default sound data latch value
 	m_p24_data = 0xff;
@@ -1392,8 +1391,6 @@ void babypkr_state::machine_start()
 	videopkr_state::machine_start();
 
 	m_p24_data = 0;
-
-	m_top_lamps.resolve();
 }
 
 
@@ -1427,7 +1424,7 @@ void videopkr_state::videopkr(machine_config &config)
 	TIMER(config, "t1_timer").configure_periodic(FUNC(videopkr_state::sound_t1_callback), attotime::from_hz(50));
 
 	// video hardware
-	screen_device &screen(SCREEN(config, "screen", SCREEN_TYPE_RASTER));
+	screen_device &screen(SCREEN(config, "screen"));
 	screen.set_size(32*8, 32*8);
 	screen.set_visarea(5*8, 31*8-1, 3*8, 29*8-1);
 	screen.set_refresh_hz(60);
@@ -1493,7 +1490,7 @@ void babypkr_state::babypkr(machine_config &config)
 	// most likely romless or eprom
 	i8031_device &soundcpu(I8031(config.replace(), m_soundcpu, CPU_CLOCK));
 	soundcpu.set_addrmap(AS_PROGRAM, &babypkr_state::i8051_sound_mem);
-	soundcpu.set_addrmap(AS_IO, &babypkr_state::i8051_sound_port);
+	soundcpu.set_addrmap(AS_DATA, &babypkr_state::i8051_sound_port);
 	soundcpu.port_in_cb<0>().set(FUNC(babypkr_state::baby_sound_p0_r));
 	soundcpu.port_out_cb<0>().set(FUNC(babypkr_state::baby_sound_p0_w));
 	soundcpu.port_in_cb<1>().set(FUNC(babypkr_state::baby_sound_p1_r));
@@ -1519,7 +1516,7 @@ void babypkr_state::bpoker(machine_config &config)
 
 	i8751_device &maincpu(I8751(config.replace(), m_maincpu, XTAL(6'000'000)));
 	maincpu.set_addrmap(AS_PROGRAM, &babypkr_state::i8751_map);
-	maincpu.set_addrmap(AS_IO, &babypkr_state::i8751_io_port);
+	maincpu.set_addrmap(AS_DATA, &babypkr_state::i8751_data_port);
 	maincpu.set_vblank_int("screen", FUNC(babypkr_state::irq0_line_assert));
 	maincpu.port_in_cb<0>().set_constant(0);
 	maincpu.port_out_cb<1>().set(FUNC(babypkr_state::bpoker_p1_data_w));

@@ -55,7 +55,10 @@
 
 #include "cpu/m68000/m68000.h"
 #include "machine/nvram.h"
+
 #include "speaker.h"
+
+#include "endianness.h"
 
 
 namespace {
@@ -106,7 +109,7 @@ private:
 	void argh_map(address_map &map) ATTR_COLD;
 	void overlay_512kb_map(address_map &map) ATTR_COLD;
 
-	optional_memory_region m_bios_region, m_rom_board;
+	optional_region_ptr<uint16_t> m_bios_region, m_rom_board;
 
 	uint8_t m_coin_counter[2];
 };
@@ -122,7 +125,7 @@ private:
 void arcadia_amiga_state::arcadia_multibios_change_game(uint16_t data)
 {
 	if (data == 0)
-		m_maincpu->space(AS_PROGRAM).install_rom(0x800000, 0x97ffff, m_rom_board->base());
+		m_maincpu->space(AS_PROGRAM).install_rom(0x800000, 0x97ffff, &m_rom_board[0]);
 	else
 		m_maincpu->space(AS_PROGRAM).nop_read(0x800000, 0x97ffff);
 }
@@ -328,8 +331,8 @@ void arcadia_amiga_state::arcadia(machine_config &config)
 	ADDRESS_MAP_BANK(config, m_chipset).set_map(&arcadia_amiga_state::ocs_map).set_options(ENDIANNESS_BIG, 16, 9, 0x200);
 
 	AGNUS_COPPER(config, m_copper, amiga_state::CLK_7M_NTSC);
-	m_copper->set_host_cpu_tag(m_maincpu);
 	m_copper->mem_read_cb().set(FUNC(amiga_state::chip_ram_r));
+	m_copper->custom_write_cb().set(m_chipset, FUNC(address_map_bank_device::write16));
 	m_copper->set_ecs_mode(false);
 
 	NVRAM(config, "nvram", nvram_device::DEFAULT_ALL_0);
@@ -927,23 +930,22 @@ ROM_END
 
 void arcadia_amiga_state::generic_decode(const char *tag, int bit7, int bit6, int bit5, int bit4, int bit3, int bit2, int bit1, int bit0)
 {
-	uint16_t *rom = (uint16_t *)memregion(tag)->base();
-	int i;
+	uint16_t *rom = &memregion(tag)->as_u16();
 
-	/* only the low byte of ROMs are encrypted in these games */
-	for (i = 0; i < 0x20000/2; i++)
+	// only the low byte of ROMs are encrypted in these games
+	for (unsigned i = 0; i < 0x20000/2; i++)
 		rom[i] = bitswap<16>(rom[i], 15,14,13,12,11,10,9,8, bit7,bit6,bit5,bit4,bit3,bit2,bit1,bit0);
 
 	if (0)
 	{
-		uint8_t *ROM = memregion(tag)->base();
+		auto ROM = util::big_endian_cast<uint8_t>(&memregion(tag)->as_u16());
 	//  int size = memregion(tag)->bytes();
 
 		auto filename = "decrypted_" + std::string(machine().system().name);
 		auto fp = fopen(filename.c_str(), "w+b");
 		if (fp)
 		{
-			for (i = 0; i < 0x20000; i++)
+			for (unsigned i = 0; i < 0x20000; i++)
 				fwrite(&ROM[i*2], 1, 1, fp);
 
 			fclose(fp);
@@ -964,15 +966,11 @@ void arcadia_amiga_state::init_arcadia()
 	m_agnus_id = AGNUS_HR_NTSC;
 	m_denise_id = DENISE;
 
-	if (m_bios_region != nullptr)
+	if (m_bios_region)
 	{
-		/* OnePlay bios is encrypted, TenPlay is not */
-		uint16_t *rom = (uint16_t *)m_bios_region->base();
-
-		if (rom[0] != 0x4afc)
-		{
+		// OnePlay bios is encrypted, TenPlay is not
+		if (m_bios_region[0] != 0x4afc)
 			generic_decode("user2", 6, 1, 0, 2, 3, 4, 5, 7);
-		}
 	}
 }
 

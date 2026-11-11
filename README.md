@@ -10,6 +10,11 @@ You DO NOT have to do this on the cockpit versions of the ROM's or the Race Driv
 
 I recommend playing the British version of Race Drivin' Panorama instead of Street Drivin' because it has the extra Stock Car track that Street Drivin' has and it has manual transmision cars which Street Drivin' is lacking. Street Drivin's audio is messed up too compared to Race Drivin's Panorama. The British version of Race Drivin' Panorama runs at a much higher frame rate but it doesn't have the multi monitor capabilities. If you want to play with multiple monitors use the official version of MAME instead but be aware the frame rate will be very low.
 
+### Community
+
+* [r/MAME](https://www.reddit.com/r/MAME/) on Reddit
+* [MAMEdev Forum](https://forum.mamedev.org/)
+* [MAMEdev Discussions](https://github.com/orgs/mamedev/discussions) on GitHub
 
 ### How to compile?
 
@@ -77,7 +82,7 @@ is required to use the "MAME" name, logo, or wordmark.
 <img align="right" width="100" src="https://opensource.org/wp-content/uploads/2009/06/OSIApproved.svg">
 </a>
 
-    Copyright (c) 1997-2025  MAMEdev and contributors
+    Copyright (c) 1997-2026  MAMEdev and contributors
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of the GNU General Public License version 2, as provided in

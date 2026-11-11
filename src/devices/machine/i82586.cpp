@@ -304,6 +304,9 @@ void i82586_base_device::process_scb()
 		CUC_NAME[(m_scb_cs & CUC) >> 24],
 		RUC_NAME[(m_scb_cs & RUC) >> 20]);
 
+	// the command word has been accepted, clear it
+	m_space->write_word(m_scb_address + 2, 0);
+
 	// clear interrupt flags when acknowledged
 	if (m_scb_cs & ACK_CX)
 		m_cx = false;
@@ -384,9 +387,11 @@ void i82586_base_device::process_scb()
 
 void i82586_base_device::update_scb()
 {
-	// write the status word and clear the command word of the scb
+	// write the status word only; the command word beside it is written by the
+	// host and cleared in process_scb() when a channel attention is accepted.
+	// Clearing it here as well loses commands issued while the cu is running.
 	// TODO: T (throttle) status flag
-	m_space->write_dword(m_scb_address,
+	m_space->write_word(m_scb_address,
 		(m_cx ? CX : 0) |
 		(m_fr ? FR : 0) |
 		(m_cna ? CNA : 0) |
@@ -479,8 +484,11 @@ void i82586_base_device::cu_complete(const u16 status)
 			// fetch link address
 			m_cba = address(m_cba, 4, 4);
 
-			// restart timer
-			m_cu_timer->adjust(attotime::zero);
+			// restart timer; the delay must not be zero, as command lists may be
+			// circular, and a zero delay retriggers the timer endlessly at the
+			// same time. 16 clocks is the minimum for a nop: four bus cycles of
+			// four clocks.
+			m_cu_timer->adjust(attotime::from_ticks(16, clock()));
 		}
 	}
 	else
@@ -603,7 +611,7 @@ int i82586_base_device::fetch_bytes(u8 *buf, u32 src, int length)
 		// fetch aligned words from the source
 		while (offset + 1 < length)
 		{
-			*(u16 *)&buf[offset] = m_space->read_word(src + offset);
+			put_u16le(&buf[offset], m_space->read_word(src + offset));
 			offset += 2;
 		}
 
@@ -620,15 +628,12 @@ int i82586_base_device::fetch_bytes(u8 *buf, u32 src, int length)
 		switch (src & 3)
 		{
 		case 1:
-			buf[offset] = m_space->read_byte(src + offset);
-			offset++;
-
-			*(u16 *)&buf[offset] = m_space->read_word(src + offset);
-			offset += 2;
+			put_u24le(&buf[offset], m_space->read_dword(src + offset, 0xffffff));
+			offset += 3;
 			break;
 
 		case 2:
-			*(u16 *)&buf[offset] = m_space->read_word(src + offset);
+			put_u16le(&buf[offset], m_space->read_word(src + offset));
 			offset += 2;
 			break;
 
@@ -641,7 +646,7 @@ int i82586_base_device::fetch_bytes(u8 *buf, u32 src, int length)
 		// fetch aligned dwords from the source
 		while (offset + 3 < length)
 		{
-			*(u32 *)&buf[offset] = m_space->read_dword(src + offset);
+			put_u32le(&buf[offset], m_space->read_dword(src + offset));
 			offset += 4;
 		}
 
@@ -654,15 +659,13 @@ int i82586_base_device::fetch_bytes(u8 *buf, u32 src, int length)
 			break;
 
 		case 2:
-			*(u16 *)&buf[offset] = m_space->read_word(src + offset);
+			put_u16le(&buf[offset], m_space->read_word(src + offset));
 			offset += 2;
 			break;
 
 		case 3:
-			*(u16 *)&buf[offset] = m_space->read_word(src + offset);
-			offset += 2;
-			buf[offset] = m_space->read_byte(src + offset);
-			offset++;
+			put_u24le(&buf[offset], m_space->read_dword(src + offset, 0xffffff));
+			offset += 3;
 			break;
 		}
 		break;
@@ -688,7 +691,7 @@ int i82586_base_device::store_bytes(u32 dst, u8 *buf, int length)
 		// store aligned words to the destination
 		while (offset + 1 < length)
 		{
-			m_space->write_word(dst + offset, *(u16 *)&buf[offset]);
+			m_space->write_word(dst + offset, get_u16le(&buf[offset]));
 			offset += 2;
 		}
 
@@ -705,14 +708,12 @@ int i82586_base_device::store_bytes(u32 dst, u8 *buf, int length)
 		switch (dst & 3)
 		{
 		case 1:
-			m_space->write_byte(dst + offset, buf[offset]);
-			offset++;
-			m_space->write_word(dst + offset, *(u16 *)&buf[offset]);
-			offset += 2;
+			m_space->write_dword(dst + offset, get_u24le(&buf[offset]), 0xffffff);
+			offset += 3;
 			break;
 
 		case 2:
-			m_space->write_word(dst + offset, *(u16 *)&buf[offset]);
+			m_space->write_word(dst + offset, get_u16le(&buf[offset]));
 			offset += 2;
 			break;
 
@@ -725,7 +726,7 @@ int i82586_base_device::store_bytes(u32 dst, u8 *buf, int length)
 		// store aligned dwords to the destination
 		while (offset + 3 < length)
 		{
-			m_space->write_dword(dst + offset, *(u32 *)&buf[offset]);
+			m_space->write_dword(dst + offset, get_u32le(&buf[offset]));
 			offset += 4;
 		}
 
@@ -738,15 +739,13 @@ int i82586_base_device::store_bytes(u32 dst, u8 *buf, int length)
 			break;
 
 		case 2:
-			m_space->write_word(dst + offset, *(u16 *)&buf[offset]);
+			m_space->write_word(dst + offset, get_u16le(&buf[offset]));
 			offset += 2;
 			break;
 
 		case 3:
-			m_space->write_word(dst + offset, *(u16 *)&buf[offset]);
-			offset += 2;
-			m_space->write_byte(dst + offset, buf[offset]);
-			offset++;
+			m_space->write_dword(dst + offset, get_u24le(&buf[offset]), 0xffffff);
+			offset += 3;
 			break;
 		}
 		break;
@@ -1043,7 +1042,7 @@ bool i82586_device::cu_dump()
 	memcpy(&buf[0x0c], &get_mac()[0], 6);
 
 	// hash register
-	*(u64 *)&buf[0x24] = m_mac_multi;
+	put_u64le(&buf[0x24], m_mac_multi);
 
 	// store dump buffer
 	dump_address = m_scb_base + m_space->read_word(m_cba + 6);
@@ -1086,7 +1085,7 @@ u16 i82586_device::ru_execute(u8 *buf, int length)
 	if (~compute_crc(buf, length, cfg_crc16()) != FCS_RESIDUE)
 	{
 		LOGMASKED(LOG_FRAMES, "ru_execute crc error computed 0x%08x stored 0x%08x\n",
-			compute_crc(buf, length - 4, cfg_crc16()), *(u32 *)&buf[length - 4]);
+			compute_crc(buf, length - 4, cfg_crc16()), get_u32le(&buf[length - 4]));
 
 		// increment crc error count
 		m_space->write_word(m_scb_address + 8, m_space->read_word(m_scb_address + 8) + 1);
@@ -1134,25 +1133,27 @@ u16 i82586_device::ru_execute(u8 *buf, int length)
 		m_space->write_word(m_scb_base + m_rbd_offset + 0, actual | RB_F | (remaining ? 0 : RB_EOF));
 
 		// check if buffers exhausted
-		if ((rbd_size & RB_EL))
+		if (rbd_size & RB_EL)
 		{
 			m_rbd_offset = RBD_EMPTY;
 
-			if (remaining)
-			{
-				// set buffers exhausted status
-				status |= RFD_S_BUFFER;
-
-				m_ru_state = RU_NR;
-				m_rnr = true;
-			}
+			m_ru_state = RU_NR;
+			m_rnr = true;
 		}
 		else
 			// fetch next rbd offset
 			m_rbd_offset = m_space->read_word(m_scb_base + m_rbd_offset + 2);
 	}
 
-	if (remaining == 0 || cfg_save_bad_frames())
+	if (remaining)
+	{
+		// set buffer exhausted status
+		status |= RFD_S_BUFFER;
+
+		// increment resource error count
+		m_space->write_word(m_scb_address + 12, m_space->read_word(m_scb_address + 12) + 1);
+	}
+	else
 		// set frame received status
 		status |= RFD_C;
 
@@ -1709,7 +1710,7 @@ bool i82596_device::cu_dump()
 		memcpy(&buf[0x0c], &get_mac()[0], 6);
 
 		// hash register
-		*(u64 *)&buf[0x24] = m_mac_multi;
+		put_u64le(&buf[0x24], m_mac_multi);
 	}
 	else
 	{
@@ -1720,7 +1721,7 @@ bool i82596_device::cu_dump()
 		memcpy(&buf[0x0e], &get_mac()[0], 6);
 
 		// hash register
-		*(u64 *)&buf[0x26] = m_mac_multi;
+		put_u64le(&buf[0x26], m_mac_multi);
 	}
 
 	// store dump buffer
@@ -1799,7 +1800,7 @@ u16 i82596_device::ru_execute(u8 *buf, int length)
 	if (~compute_crc(buf, length, cfg_crc16()) != FCS_RESIDUE)
 	{
 		LOGMASKED(LOG_FRAMES, "ru_execute crc error computed 0x%08x stored 0x%08x\n",
-			compute_crc(buf, length - 4, cfg_crc16()), *(u32 *)&buf[length - 4]);
+			compute_crc(buf, length - 4, cfg_crc16()), get_u32le(&buf[length - 4]));
 
 		// increment crc error count
 		if (mode() == MODE_82586)

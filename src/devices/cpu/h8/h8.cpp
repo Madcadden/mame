@@ -27,7 +27,7 @@
 #include "h8d.h"
 
 h8_device::h8_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, u32 clock, address_map_constructor map_delegate) :
-	cpu_device(mconfig, type, tag, owner, clock),
+	h8_cpu_base(mconfig, type, tag, owner, clock),
 	device_nvram_interface(mconfig, *this),
 	m_program_config("program", ENDIANNESS_BIG, 16, 16, 0, map_delegate),
 	m_internal_ram(*this, "internal_ram"),
@@ -162,6 +162,8 @@ void h8_device::device_start()
 	save_item(NAME(m_TMP1));
 	save_item(NAME(m_TMP2));
 	save_item(NAME(m_TMPR));
+	save_item(NAME(m_dma_dest));
+	save_item(NAME(m_dma_mode16));
 
 	save_item(NAME(m_inst_state));
 	save_item(NAME(m_inst_substate));

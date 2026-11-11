@@ -50,16 +50,16 @@ public:
 	DECLARE_INPUT_CHANGED_MEMBER(rate_changed);
 
 protected:
-	// device-level overrides
+	// device_t implementation
 	virtual void device_start() override ATTR_COLD;
 	virtual void device_reset() override ATTR_COLD;
 	virtual ioport_constructor device_input_ports() const override ATTR_COLD;
 	virtual void device_add_mconfig(machine_config &config) override ATTR_COLD;
 
-	// device_a2bus_card_interface overrides
+	// device_a2bus_card_interface implementation
 	virtual u8 read_c0nx(u8 offset) override;
 	virtual void write_c0nx(u8 offset, u8 data) override;
-	virtual bool take_c800() override { return false; }
+	virtual void reset_from_bus() override;
 
 private:
 	// object finders
@@ -87,6 +87,12 @@ void a2bus_byte8251_device::device_reset()
 {
 	// Update data rate
 	m_brg->control_w(m_switches->read());
+}
+
+void a2bus_byte8251_device::reset_from_bus()
+{
+	m_usart->reset();
+	m_brg->reset();
 }
 
 INPUT_CHANGED_MEMBER(a2bus_byte8251_device::rate_changed)
@@ -131,7 +137,7 @@ ioport_constructor a2bus_byte8251_device::device_input_ports() const
 
 void a2bus_byte8251_device::device_add_mconfig(machine_config &config)
 {
-	I8251(config, m_usart, 1021800); // CLK tied to ϕ1 signal from bus pin 38
+	I8251(config, m_usart, A2BUS_1M_CLOCK); // CLK tied to ϕ1 signal from bus pin 38
 	m_usart->txd_handler().set("rs232", FUNC(rs232_port_device::write_txd));
 
 	MM5307AA(config, m_brg, DERIVED_CLOCK(1, 8));

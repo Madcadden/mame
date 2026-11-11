@@ -965,7 +965,7 @@ void mystwarr_state::mystwarr(machine_config &config)
 	MCFG_MACHINE_RESET_OVERRIDE(mystwarr_state,mystwarr)
 
 	// video hardware
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_video_attributes(VIDEO_UPDATE_AFTER_VBLANK);
 //  m_screen->set_refresh_hz(60);
 	m_screen->set_raw(6000000, 288+16+32+48, 0, 287, 224+16+8+16, 0, 223);
@@ -983,14 +983,14 @@ void mystwarr_state::mystwarr(machine_config &config)
 	m_k056832->set_config(K056832_BPP_5, 0, 0);
 	m_k056832->set_palette(m_palette);
 
-	K055555(config, m_k055555, 0);
+	K055555(config, m_k055555);
 
-	K055673(config, m_k055673, 0);
+	K055673(config, m_k055673);
 	m_k055673->set_sprite_callback(FUNC(mystwarr_state::mystwarr_sprite_callback));
 	m_k055673->set_config(K055673_LAYOUT_GX, -48, -24);
 	m_k055673->set_palette(m_palette);
 
-	K054338(config, m_k054338, 0, m_k055555);
+	K054338(config, m_k054338, m_k055555);
 	m_k054338->set_alpha_invert(1);
 
 	MCFG_VIDEO_START_OVERRIDE(mystwarr_state, mystwarr)
@@ -1072,7 +1072,7 @@ void mystwarr_state::metamrph(machine_config &config)
 
 	m_k053252->set_offsets(24, 15);
 
-	K053250(config, m_k053250_1, 0, m_palette, m_screen, -7, 0);
+	K053250(config, m_k053250_1, m_palette, m_screen, -7, 0);
 
 	// video hardware
 	MCFG_VIDEO_START_OVERRIDE(mystwarr_state, metamrph)
@@ -1129,7 +1129,7 @@ void mystwarr_state::gaiapols(machine_config &config)
 
 	m_k053252->set_offsets(40, 16);
 
-	K054000(config, "k054000", 0);
+	K054000(config, "k054000");
 
 	GFXDECODE(config, m_gfxdecode, m_palette, gfx_gaiapols);
 
@@ -2353,7 +2353,7 @@ ROM_START( mmaulersu )
 	ROM_LOAD("170a15.2m", 0x200000, 0x200000, CRC(d4113ae9) SHA1(e234d06f462e3db64455c384c2f42174f9ef9c6a) )
 
 	ROM_REGION( 0x80, "eeprom", 0 ) // default EEPROM to prevent game booting upside down with error
-	ROM_LOAD( "mmaulers.nv", 0x0000, 0x080, CRC(8324f517) SHA1(4697d091a1924e1a5d6c3ffc64a40fd36eebe557) )
+	ROM_LOAD( "mmaulersu.nv", 0x0000, 0x080, CRC(dce91748) SHA1(17b2c2b5b699d3e875c6e2e3dbd81401ca3517d4) )
 ROM_END
 
 

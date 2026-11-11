@@ -5,6 +5,7 @@
     Sega System 16B hardware
 
 ***************************************************************************/
+
 #ifndef MAME_SEGA_SEGAS16B_H
 #define MAME_SEGA_SEGAS16B_H
 
@@ -16,12 +17,13 @@
 #include "sega16sp.h"
 
 #include "cpu/m68000/m68000.h"
-#include "cpu/mcs51/mcs51.h"
+#include "cpu/mcs51/i8051.h"
 #include "cpu/z80/z80.h"
 #include "machine/cxd1095.h"
 #include "machine/gen_latch.h"
 #include "machine/msm6253.h"
 #include "machine/nvram.h"
+#include "machine/quadmouse.h"
 #include "machine/upd4701.h"
 #include "sound/dac.h"
 #include "sound/upd7759.h"
@@ -111,6 +113,7 @@ public:
 	void init_generic_korean();
 	void init_generic_bootleg();
 	void init_lockonph();
+
 	// game-specific driver init
 	void init_isgsm();
 	void init_tturf_5704();
@@ -160,7 +163,7 @@ protected:
 
 	// other callbacks
 	void upd7759_generate_nmi(int state);
-	INTERRUPT_GEN_MEMBER( i8751_main_cpu_vblank );
+	INTERRUPT_GEN_MEMBER(i8751_main_cpu_vblank);
 	void spin_68k_w(uint8_t data);
 
 	// video updates
@@ -181,7 +184,7 @@ protected:
 	void lockonph_sound_iomap(address_map &map) ATTR_COLD;
 	void lockonph_sound_map(address_map &map) ATTR_COLD;
 	void map_fpointbla(address_map &map) ATTR_COLD;
-	void mcu_io_map(address_map &map) ATTR_COLD;
+	void mcu_data_map(address_map &map) ATTR_COLD;
 	void sound_decrypted_opcodes_map(address_map &map) ATTR_COLD;
 	void sound_map(address_map &map) ATTR_COLD;
 	void sound_portmap(address_map &map) ATTR_COLD;
@@ -301,7 +304,8 @@ public:
 protected:
 	void sound_control_w(uint8_t data);
 	void dac_data_w(offs_t offset, uint8_t data);
-	INTERRUPT_GEN_MEMBER( soundirq_cb );
+	INTERRUPT_GEN_MEMBER(soundirq_cb);
+
 	bool m_nmi_enable;
 	uint16_t m_dac_data;
 
@@ -329,8 +333,32 @@ public:
 	ioport_value afighter_handl_right_r();
 
 private:
-	required_ioport     m_accel;
-	required_ioport     m_steer;
+	required_ioport m_accel;
+	required_ioport m_steer;
+};
+
+class wfishing_state : public segas16b_state
+{
+public:
+	// construction/destruction
+	wfishing_state(const machine_config &mconfig, device_type type, const char *tag)
+		: segas16b_state(mconfig, type, tag)
+		, m_handle_encoder(*this, "handle")
+		, m_handle_dir(0)
+	{ }
+
+	void wfishing(machine_config &config);
+
+	ioport_value handle_r();
+
+protected:
+	virtual void machine_start() override ATTR_COLD;
+
+private:
+	void handle_pulse_w(int state);
+
+	required_device<quadencoder_device> m_handle_encoder;
+	uint8_t m_handle_dir;
 };
 
 #endif // MAME_SEGA_SEGAS16B_H

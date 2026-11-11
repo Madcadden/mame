@@ -24,6 +24,9 @@
 #include "bbc_kbd.h"
 
 #include "bus/bbc/vsp/slot.h"
+#include "machine/74123.h"
+#include "machine/input_merger.h"
+#include "machine/rescap.h"
 #include "sound/tms5220.h"
 
 #include "formats/uef_cas.h"
@@ -270,6 +273,10 @@ void bbcb_state::update_sdb()
 {
 	uint8_t const latch = m_latch->output_state();
 
+	// sound
+	if (!BIT(latch, 0))
+		m_sn->write(m_sdb);
+
 	// speech
 	if (m_vsp)
 	{
@@ -436,7 +443,7 @@ void bbcb_state::bbca(machine_config &config)
 
 	RAM(config, m_ram).set_default_size("16K").set_extra_options("32K");
 
-	SCREEN(config, m_screen, SCREEN_TYPE_RASTER);
+	SCREEN(config, m_screen);
 	m_screen->set_raw(16_MHz_XTAL, 1024, 0, 640, 312, 0, 256);
 	m_screen->set_screen_update("crtc", FUNC(hd6845s_device::screen_update));
 
@@ -457,7 +464,6 @@ void bbcb_state::bbca(machine_config &config)
 	config.set_default_layout(layout_bbc);
 
 	LS259(config, m_latch);
-	m_latch->q_out_cb<0>().set([this](int state) { if (!state) m_sn->write(m_sdb); });
 	m_latch->q_out_cb<3>().set(m_kbd, FUNC(bbc_kbd_device::write_kb_en));
 	m_latch->q_out_cb<6>().set_output("capslock_led");
 	m_latch->q_out_cb<7>().set_output("shiftlock_led");
@@ -552,6 +558,7 @@ void bbcb_state::bbcb(machine_config &config)
 	upd7002.eoc_callback().set(m_sysvia, FUNC(via6522_device::write_cb1));
 
 	BBC_ANALOGUE_SLOT(config, m_analog, bbc_analogue_devices, nullptr);
+	m_analog->set_screen("screen");
 	m_analog->lpstb_handler().set(m_sysvia, FUNC(via6522_device::write_cb2));
 	m_analog->lpstb_handler().append([this](int state) { if (state) m_crtc->assert_light_pen_input(); });
 
@@ -562,12 +569,23 @@ void bbcb_state::bbcb(machine_config &config)
 	MC6854(config, m_adlc);
 	m_adlc->out_txd_cb().set("network", FUNC(econet_device::host_data_w));
 	m_adlc->out_irq_cb().set(FUNC(bbcb_state::adlc_irq_w));
-	//m_adlc->out_rts_cb().
+	m_adlc->out_rts_cb().set("network", FUNC(econet_device::host_rts_w));
 
-	econet_device &econet(ECONET(config, "network", 0));
+	ttl74123_device &ic87(TTL74123(config, "ic87", RES_K(39), CAP_N(2.2)));
+	ic87.set_connection_type(TTL74123_NOT_GROUNDED_NO_DIODE);
+	ic87.set_b_pin_value(1);
+	ic87.set_clear_pin_value(1);
+	ic87.out_cb().set(m_adlc, FUNC(mc6854_device::set_dcd)).invert();
+	ic87.out_cb().append("ic91", FUNC(input_merger_device::in_w<0>));
+
+	INPUT_MERGER_ALL_HIGH(config, "ic91").output_handler().set(m_adlc, FUNC(mc6854_device::set_cts)).invert();
+
+	econet_device &econet(ECONET(config, "network"));
 	econet.clk_wr_callback().set(m_adlc, FUNC(mc6854_device::txc_w));
 	econet.clk_wr_callback().append(m_adlc, FUNC(mc6854_device::rxc_w));
+	econet.clk_wr_callback().append(ic87, FUNC(ttl74123_device::a_w));
 	econet.data_wr_callback().set(m_adlc, FUNC(mc6854_device::set_rx));
+	econet.valid_wr_callback().set("ic91", FUNC(input_merger_device::in_w<1>));
 	ECONET_SLOT(config, "econet", "network", econet_devices);
 
 	BBC_1MHZBUS_SLOT(config, m_1mhzbus, 16_MHz_XTAL / 16, bbc_1mhzbus_devices, nullptr);

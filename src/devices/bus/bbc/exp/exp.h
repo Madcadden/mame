@@ -41,6 +41,7 @@
 
 #pragma once
 
+#include "screen.h"
 
 
 //**************************************************************************
@@ -59,13 +60,12 @@ public:
 	bbc_exp_slot_device(machine_config const &mconfig, char const *tag, device_t *owner, uint32_t clock, T &&slot_options, const char *default_option)
 		: bbc_exp_slot_device(mconfig, tag, owner, clock)
 	{
-		option_reset();
-		slot_options(*this);
-		set_default_option(default_option);
-		set_fixed(false);
+		set_options(std::forward<T>(slot_options), default_option, false);
 	}
 
 	bbc_exp_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+	template <typename T> void set_screen(T &&tag) { m_screen.set_tag(std::forward<T>(tag)); }
 
 	// callbacks
 	auto irq_handler() { return m_irq_handler.bind(); }
@@ -76,9 +76,12 @@ public:
 	void fred_w(offs_t offset, uint8_t data);
 	uint8_t jim_r(offs_t offset);
 	void jim_w(offs_t offset, uint8_t data);
+	uint8_t rom_r(offs_t offset);
+	void rom_w(offs_t offset, uint8_t data);
 
 	void irq_w(int state) { m_irq_handler(state); }
 	void nmi_w(int state) { m_nmi_handler(state); }
+	void lpstb_w(int state) { m_lpstb_handler(state); }
 
 	// additional callbacks/handlers for mertec device (also connects to joyport)
 	auto cb1_handler() { return m_cb1_handler.bind(); }
@@ -91,6 +94,8 @@ public:
 	void pb_w(uint8_t data);
 	void write_cb1(int state);
 	void write_cb2(int state);
+
+	optional_device<screen_device> m_screen;
 
 protected:
 	// device_t overrides
@@ -117,6 +122,8 @@ public:
 	virtual void fred_w(offs_t offset, uint8_t data) { }
 	virtual uint8_t jim_r(offs_t offset) { return 0xff; }
 	virtual void jim_w(offs_t offset, uint8_t data) { }
+	virtual uint8_t rom_r(offs_t offset) { return 0xff; }
+	virtual void rom_w(offs_t offset, uint8_t data) { }
 
 	virtual uint8_t pb_r() { return 0xff; }
 	virtual void pb_w(uint8_t data) { }
@@ -130,7 +137,7 @@ protected:
 };
 
 
-// device type definition
+// device type declaration
 DECLARE_DEVICE_TYPE(BBC_EXP_SLOT, bbc_exp_slot_device)
 
 void bbc_exp_devices(device_slot_interface &device);

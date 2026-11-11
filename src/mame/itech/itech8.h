@@ -13,6 +13,7 @@
 #include "machine/nvram.h"
 #include "video/tlc34076.h"
 #include "video/tms34061.h"
+
 #include "emupal.h"
 #include "screen.h"
 
@@ -38,7 +39,8 @@ public:
 		m_p2(*this, "P2"),
 		m_visarea(0, 0, 0, 0),
 		m_bankxor(0)
-	{}
+	{
+	}
 
 	void rimrockn(machine_config &config);
 	void gtg2(machine_config &config);
@@ -93,6 +95,7 @@ protected:
 	u8 m_fetch_rle_count = 0;
 	u8 m_fetch_rle_value = 0;
 	u8 m_fetch_rle_literal = 0;
+	u8 m_analog_last[4];
 	emu_timer *m_irq_off_timer = nullptr;
 	emu_timer *m_blitter_done_timer = nullptr;
 	int m_bankxor = 0;
@@ -198,8 +201,7 @@ private:
 	s32 m_last_ytotal = 0;
 	u8 m_crosshair_vis = 0;
 
-	//----------- defined in itech/itech8_m.cpp -----------
-
+	// defined in itech/itech8_m.cpp
 	u8 z80_port_r();
 	void z80_port_w(u8 data);
 
@@ -207,15 +209,11 @@ private:
 	u8 z80_control_r();
 	void z80_control_w(u8 data);
 
-	void inters_to_vels(u16 inter1, u16 inter2, u16 inter3, u8 beams,
-							u8 &xres, u8 &vxres, u8 &vyres);
-	void vels_to_inters(u8 x, u8 vx, u8 vy,
-							u16 &inter1, u16 &inter2, u16 &inter3, u8 &beams);
-	void inters_to_words(u16 inter1, u16 inter2, u16 inter3, u8 &beams,
-							u16 &word1, u16 &word2, u16 &word3);
+	void inters_to_vels(u16 inter1, u16 inter2, u16 inter3, u8 beams, u8 &xres, u8 &vxres, u8 &vyres);
+	void vels_to_inters(u8 x, u8 vx, u8 vy, u16 &inter1, u16 &inter2, u16 &inter3, u8 &beams);
+	void inters_to_words(u16 inter1, u16 inter2, u16 inter3, u8 &beams, u16 &word1, u16 &word2, u16 &word3);
 
-	void words_to_sensors(u16 word1, u16 word2, u16 word3, u8 beams,
-							u16 &sens0, u16 &sens1, u16 &sens2, u16 &sens3);
+	void words_to_sensors(u16 word1, u16 word2, u16 word3, u8 beams, u16 &sens0, u16 &sens1, u16 &sens2, u16 &sens3);
 	void compute_sensors();
 	TIMER_CALLBACK_MEMBER(delayed_z80_control_w);
 

@@ -121,6 +121,14 @@ private:
 
 	void cpu_map(address_map &map) ATTR_COLD;
 
+	// a processor window's low register holds address bits 35:21 and its high register bits 27:21
+	uint32_t proc_window_start(int lo) const { return m_reg[lo] << 21; }
+	uint32_t proc_window_end(int lo) const { return (((m_reg[lo] & ~0x7f) | (m_reg[lo + 2] & 0x7f)) << 21) | 0x1fffff; }
+
+	// a DRAM bank or device's registers hold address bits 27:20 within its processor window
+	uint32_t sub_window_start(int proc_lo, int lo) const { return ((m_reg[proc_lo] & ~0x7f) << 21) | ((m_reg[lo] & 0xff) << 20); }
+	uint32_t sub_window_end(int proc_lo, int lo) const { return ((m_reg[proc_lo] & ~0x7f) << 21) | ((m_reg[lo + 1] & 0xff) << 20) | 0xfffff; }
+
 	void map_cpu_space();
 
 	uint32_t m_prev_addr;
@@ -148,7 +156,7 @@ private:
 	galileo_addr_map dma_addr_map[proc_addr_bank::ADDR_NUM];
 	int dma_fetch_next(address_space &space, int which);
 	TIMER_CALLBACK_MEMBER(perform_dma);
-	address_space* dma_decode_address(uint32_t &addr);
+	address_space* dma_decode_address(offs_t &addr);
 };
 
 // Supports R4600/4650/4700/R5000 CPUs
